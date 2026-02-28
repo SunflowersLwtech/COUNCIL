@@ -1,0 +1,54 @@
+# ===== OS / Editor =====
+.DS_Store
+.vscode/
+.idea/
+
+# ===== Environment / Secrets =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ===== AI Assistant / Local Agent Artifacts =====
+CLAUDE.md
+.claude/
+.mcp-sidecar/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.venv/
+venv/
+env/
+
+# ===== Node / Frontend =====
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+
+# ===== Build / Runtime =====
+dist/
+build/
+*.log
+
+# ===== Test Artifacts / Non-essential Test Files =====
+tests/**/__pycache__/
+e2e/**/__pycache__/
+
+# ===== Non-core Project Artifacts =====
+demo/
+docs/plans/

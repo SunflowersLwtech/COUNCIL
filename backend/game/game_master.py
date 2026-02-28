@@ -1,0 +1,611 @@
+"""GameMaster — manages phase transitions, win conditions, narration, voting, and tension."""
+
+from __future__ import annotations
+
+import os
+import json
+import asyncio
+import random
+import logging
+from typing import TYPE_CHECKING
+from mistralai import Mistral
+from dotenv import load_dotenv
+
+from backend.models.game_models import (
+    GameState, GameEvent, CharacterPublicInfo, ChatMessage,
+    NightAction, VoteRecord, VoteResult,
+)
+from backend.game import state as game_state
+from backend.game.character_agent import CharacterAgent
+from backend.game.prompts import (
+    NARRATION_SYSTEM, NARRATION_TEMPLATES, RESPONDER_SELECTION_SYSTEM,
+)
+
+if TYPE_CHECKING:
+    from backend.game.skill_loader import SkillConfig
+
+load_dotenv()
+logger = logging.getLogger(__name__)
+
+# Complication templates for dynamic event injection
+COMPLICATION_TYPES = {
+    "revelation": "New information has come to light — someone's story doesn't add up. A detail from earlier contradicts what was just said.",
+    "time_pressure": "Tensions are rising and patience is wearing thin. The council demands decisive action NOW.",
+    "suspicion_shift": "A quiet council member suddenly looks nervous. Eyes turn toward someone who has been suspiciously silent.",
+    "alliance_crack": "Two allies exchange a tense glance. Something unspoken hangs between them.",
+    "evidence": "A piece of evidence is discovered — a note, a reaction, a slip of the tongue — that changes everything.",
+}
+
+
+class GameMaster:
+    """Manages game flow: transitions, narration, voting, win conditions, tension."""
+
+    def __init__(self, active_skills: list[SkillConfig] | None = None):
+        self._mistral = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+        self.active_skills: list[SkillConfig] = []
+        self._narration_injection: str = ""
+        if active_skills:
+            self.set_skills(active_skills)
+
+    def set_skills(self, skills: list[SkillConfig]):
+        """Update active skills and recompute cached narration injection."""
+        self.active_skills = skills
+        parts = [s.injections.get("narration", "") for s in skills]
+        self._narration_injection = "\n\n".join(p for p in parts if p)
+
+    async def advance_phase(
+        self, state: GameState, agents: dict[str, CharacterAgent]
+    ) -> tuple[GameState, str]:
+        """Advance to the next phase and generate narration.
+
+        Returns (updated state, narration text).
+        """
+        current = state.phase
+
+        if current == "lobby":
+            state = game_state.advance_to_discussion(state)
+            narration = await self._generate_narration(state, "game_start", {
+                "num_players": len(game_state.get_alive_characters(state)),
+            })
+        elif current == "discussion":
+            state = game_state.advance_to_voting(state)
+            narration = await self._generate_narration(state, "voting_start", {})
+        elif current == "voting":
+            state = game_state.advance_to_reveal(state)
+            narration = ""  # Narration comes after vote tally
+        elif current == "reveal":
+            winner = self._check_win_conditions(state)
+            if winner:
+                state = game_state.end_game(state, winner)
+                # Determine which template to use
+                evil_factions = {
+                    f.get("name", "")
+                    for f in state.world.factions
+                    if f.get("alignment", "").lower() == "evil"
+                }
+                if winner in evil_factions:
+                    template_key = "game_end_evil"
+                else:
+                    template_key = "game_end_good"
+                narration = await self._generate_narration(state, template_key, {
+                    "faction": winner,
+                })
+            else:
+                state = game_state.advance_to_night(state)
+                narration = await self._generate_narration(state, "night_start", {})
+        elif current == "night":
+            state = game_state.advance_to_discussion(state)
+            narration = await self._generate_narration(state, "discussion_start", {
+                "round": state.round,
+            })
+        else:
+            narration = ""
+
+        return state, narration
+
+    def _check_win_conditions(self, state: GameState) -> str | None:
+        """Check if any faction has won.
+
+        Good wins: all evil eliminated.
+        Evil wins: evil >= good among alive players.
+        Returns winning faction name or None.
+        """
+        alive = game_state.get_alive_characters(state)
+        if not alive and not (state.player_role and not state.player_role.is_eliminated):
+            return None
+
+        evil_factions = {
+            f.get("name", "")
+            for f in state.world.factions
+            if f.get("alignment", "").lower() == "evil"
+        }
+        good_factions = {
+            f.get("name", "")
+            for f in state.world.factions
+            if f.get("alignment", "").lower() in ("good", "neutral")
+        }
+
+        evil_alive = [c for c in alive if c.faction in evil_factions]
+        good_alive = [c for c in alive if c.faction in good_factions]
+
+        evil_alive_count = len(evil_alive)
+        good_alive_count = len(good_alive)
+
+        # Count player in faction tallies
+        if state.player_role and not state.player_role.is_eliminated:
+            if state.player_role.faction in evil_factions:
+                evil_alive_count += 1
+            else:
+                good_alive_count += 1
+
+        # All evil eliminated -> good wins
+        if evil_alive_count == 0 and good_factions:
+            return next(iter(good_factions))
+
+        # Evil >= good -> evil wins
+        if evil_factions and evil_alive_count >= good_alive_count:
+            return next(iter(evil_factions))
+
+        return None
+
+    async def handle_voting(
+        self,
+        state: GameState,
+        player_vote_target_id: str,
+        agents: dict[str, CharacterAgent],
+    ) -> tuple[GameState, VoteResult]:
+        """Collect player vote, trigger AI votes in parallel, tally, determine eliminated."""
+        alive = game_state.get_alive_characters(state)
+        alive_public = [
+            CharacterPublicInfo(
+                id=c.id, name=c.name, persona=c.persona,
+                speaking_style=c.speaking_style, avatar_seed=c.avatar_seed,
+                public_role=c.public_role, voice_id=c.voice_id,
+                is_eliminated=c.is_eliminated,
+            )
+            for c in alive
+        ]
+
+        # Include the player as a votable target for AI agents
+        player_is_alive = state.player_role and not state.player_role.is_eliminated
+        if player_is_alive:
+            alive_public.append(CharacterPublicInfo(
+                id="player", name="You (Council Member)", persona="A council member",
+                public_role="Council Member", voice_id="",
+                is_eliminated=False,
+            ))
+
+        votes: list[VoteRecord] = []
+
+        # Player vote (only if alive)
+        if player_is_alive:
+            target_char = next((c for c in alive if c.id == player_vote_target_id), None)
+            if target_char:
+                votes.append(VoteRecord(
+                    voter_id="player",
+                    voter_name="You",
+                    target_id=player_vote_target_id,
+                    target_name=target_char.name,
+                ))
+
+        # AI votes — collect in parallel for faster response
+        async def _get_vote(char, agent):
+            try:
+                target_id = await agent.vote(alive_public)
+                target = next((c for c in alive if c.id == target_id), None)
+                if target:
+                    return VoteRecord(
+                        voter_id=char.id, voter_name=char.name,
+                        target_id=target_id, target_name=target.name,
+                    )
+            except Exception as e:
+                logger.warning("Vote failed for %s: %s", char.name, e)
+            return None
+
+        vote_tasks = []
+        for char in alive:
+            agent = agents.get(char.id)
+            if agent and not char.is_eliminated:
+                vote_tasks.append(_get_vote(char, agent))
+
+        if vote_tasks:
+            results = await asyncio.gather(*vote_tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, VoteRecord):
+                    votes.append(result)
+
+        # Tally
+        tally: dict[str, int] = {}
+        for v in votes:
+            tally[v.target_id] = tally.get(v.target_id, 0) + 1
+
+        state.votes = votes
+
+        # Determine elimination
+        if not tally:
+            result = VoteResult(votes=votes, tally=tally, is_tie=True)
+            state.vote_results.append(result)
+            return state, result
+
+        max_votes = max(tally.values())
+        top = [tid for tid, count in tally.items() if count == max_votes]
+
+        if len(top) > 1:
+            # Tie
+            result = VoteResult(votes=votes, tally=tally, is_tie=True)
+            state.vote_results.append(result)
+            return state, result
+
+        eliminated_id = top[0]
+        eliminated_char = next((c for c in alive if c.id == eliminated_id), None)
+        eliminated_name = eliminated_char.name if eliminated_char else "Unknown"
+
+        state = game_state.eliminate_character(state, eliminated_id)
+
+        result = VoteResult(
+            votes=votes,
+            tally=tally,
+            eliminated_id=eliminated_id,
+            eliminated_name=eliminated_name,
+            is_tie=False,
+        )
+        state.vote_results.append(result)
+
+        return state, result
+
+    def _get_talk_modifier(self, state: GameState, char_id: str) -> str:
+        """Return a prompt modifier based on how much a character has spoken this round."""
+        round_msgs = [m for m in state.messages if m.round == state.round]
+        char_count = sum(1 for m in round_msgs if m.speaker_id == char_id)
+        alive_count = max(len(game_state.get_alive_characters(state)), 1)
+        avg = len(round_msgs) / alive_count
+        if char_count < avg * 0.5:
+            return "You haven't spoken much this round. Share your thoughts."
+        elif char_count > avg * 1.5:
+            return "You've been vocal. Keep responses brief."
+        return ""
+
+    async def select_responders(
+        self,
+        state: GameState,
+        message: str,
+        target_id: str | None,
+        agents: dict[str, CharacterAgent],
+    ) -> list[str]:
+        """Decide which characters should respond to a player message."""
+        alive = game_state.get_alive_characters(state)
+
+        # If a specific target was addressed, they always respond
+        if target_id and target_id in agents:
+            char = next((c for c in alive if c.id == target_id), None)
+            if char and not char.is_eliminated:
+                # Also pick 1-2 more to react
+                others = [c for c in alive if c.id != target_id]
+                extra_ids = await self._pick_responders(state, message, others)
+                return [target_id] + extra_ids[:2]
+
+        # General message: let LLM pick 2-3 responders
+        return await self._pick_responders(state, message, alive)
+
+    async def handle_night(
+        self,
+        state: GameState,
+        agents: dict[str, CharacterAgent],
+        player_action: NightAction | None = None,
+    ) -> tuple[GameState, str]:
+        """Execute the night phase: collect actions, resolve conflicts, apply results.
+
+        Args:
+            player_action: Optional night action from the human player.
+        Returns (updated state, night narration).
+        """
+        alive = game_state.get_alive_characters(state)
+        alive_public = [
+            CharacterPublicInfo(
+                id=c.id, name=c.name, persona=c.persona,
+                speaking_style=c.speaking_style, avatar_seed=c.avatar_seed,
+                public_role=c.public_role, voice_id=c.voice_id,
+                is_eliminated=c.is_eliminated,
+            )
+            for c in alive
+        ]
+
+        # Include player as targetable if alive
+        player_is_alive = state.player_role and not state.player_role.is_eliminated
+        if player_is_alive:
+            alive_public.append(CharacterPublicInfo(
+                id="player", name="You (Council Member)", persona="A council member",
+                public_role="Council Member", voice_id="",
+                is_eliminated=False,
+            ))
+
+        # Determine evil factions
+        evil_factions = {
+            f.get("name", "")
+            for f in state.world.factions
+            if f.get("alignment", "").lower() == "evil"
+        }
+
+        # Check if player is an evil ally — evil AI should not target player
+        player_is_evil_ally = (
+            player_is_alive
+            and state.player_role
+            and state.player_role.faction in evil_factions
+        )
+
+        # Collect night actions from eligible AI characters in parallel
+        async def get_action(char, agent):
+            extra_instructions = ""
+            if player_is_evil_ally and char.faction in evil_factions:
+                extra_instructions = " Do NOT target 'player' — they are your ally."
+            if char.faction in evil_factions:
+                role_actions = "You are evil. Choose a target to KILL tonight." + extra_instructions
+                return await agent.night_action(alive_public, role_actions)
+            elif "seer" in char.hidden_role.lower() or "investigat" in char.hidden_role.lower():
+                role_actions = "You are the Seer. Choose a target to INVESTIGATE tonight."
+                return await agent.night_action(alive_public, role_actions)
+            elif "doctor" in char.hidden_role.lower() or "protect" in char.hidden_role.lower():
+                role_actions = "You are the Doctor. Choose a target to PROTECT tonight."
+                return await agent.night_action(alive_public, role_actions)
+            return NightAction(character_id=char.id, action_type="none")
+
+        tasks = []
+        action_chars = []
+        for char in alive:
+            agent = agents.get(char.id)
+            if agent:
+                tasks.append(get_action(char, agent))
+                action_chars.append(char)
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        night_actions: list[NightAction] = []
+        for i, result in enumerate(results):
+            if isinstance(result, NightAction):
+                night_actions.append(result)
+
+        # Include player's night action if provided
+        if player_action:
+            night_actions.append(player_action)
+
+        state.night_actions = night_actions
+
+        # Resolve conflicts: kill vs protect
+        kill_targets = set()
+        protect_targets = set()
+        investigate_actions = []
+
+        for action in night_actions:
+            if action.action_type == "kill" and action.target_id:
+                kill_targets.add(action.target_id)
+            elif action.action_type == "protect" and action.target_id:
+                protect_targets.add(action.target_id)
+            elif action.action_type == "investigate" and action.target_id:
+                investigate_actions.append(action)
+
+        # Apply results
+        killed_chars = []
+        player_killed = False
+        protected = False
+        for target_id in kill_targets:
+            if target_id in protect_targets:
+                protected = True
+                for action in night_actions:
+                    if action.action_type == "kill" and action.target_id == target_id:
+                        action.result = "protected"
+                    if action.action_type == "protect" and action.target_id == target_id:
+                        action.result = "saved"
+            else:
+                state = game_state.eliminate_character(state, target_id)
+                if target_id == "player" and state.player_role:
+                    state.player_role.eliminated_by = "night_kill"
+                    player_killed = True
+                else:
+                    target_char = next((c for c in state.characters if c.id == target_id), None)
+                    if target_char:
+                        killed_chars.append(target_char)
+                for action in night_actions:
+                    if action.action_type == "kill" and action.target_id == target_id:
+                        action.result = "killed"
+
+        # Handle investigations
+        investigation_result = None
+        for action in investigate_actions:
+            if action.target_id == "player" and state.player_role:
+                action.result = f"Investigated: You (Council Member) is {state.player_role.faction}"
+            else:
+                target_char = next((c for c in state.characters if c.id == action.target_id), None)
+                if target_char:
+                    action.result = f"Investigated: {target_char.name} is {target_char.faction}"
+            # If this was the player's investigation, capture the result
+            if action.character_id == "player" and action.target_id:
+                if action.target_id == "player":
+                    investigation_result = {"name": "You", "faction": state.player_role.faction if state.player_role else "Unknown"}
+                else:
+                    tc = next((c for c in state.characters if c.id == action.target_id), None)
+                    if tc:
+                        investigation_result = {"name": tc.name, "faction": tc.faction}
+
+        # Store investigation result on state for SSE emission
+        state._player_investigation_result = investigation_result  # type: ignore[attr-defined]
+        state._player_killed_at_night = player_killed  # type: ignore[attr-defined]
+
+        # Generate night narration
+        if killed_chars or player_killed:
+            if killed_chars:
+                char = killed_chars[0]
+                narration = await self._generate_narration(state, "night_kill", {
+                    "target_name": char.name,
+                    "target_role": char.hidden_role,
+                })
+            else:
+                narration = await self._generate_narration(state, "night_kill", {
+                    "target_name": "a council member",
+                    "target_role": "unknown",
+                })
+        elif protected:
+            narration = await self._generate_narration(state, "night_protected", {})
+        else:
+            narration = await self._generate_narration(state, "night_results", {
+                "summary": "The night passed quietly. No one was harmed.",
+            })
+
+        return state, narration
+
+    async def _pick_responders(
+        self, state: GameState, message: str, candidates: list
+    ) -> list[str]:
+        """Use Mistral to pick which characters should respond."""
+        if not candidates:
+            return []
+
+        chars_desc = ", ".join(
+            f"{c.name} (id: {c.id}, role: {c.public_role})"
+            for c in candidates
+        )
+
+        try:
+            response = await asyncio.wait_for(
+                self._mistral.chat.complete_async(
+                    model="mistral-large-latest",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": RESPONDER_SELECTION_SYSTEM.format(characters=chars_desc),
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Player says: {message}\n\nWhich characters should respond?",
+                        },
+                    ],
+                    temperature=0.3,
+                    response_format={"type": "json_object"},
+                ),
+                timeout=10.0,
+            )
+            data = json.loads(response.choices[0].message.content)
+            responder_ids = data.get("responders", [])
+            valid_ids = {c.id for c in candidates}
+            return [rid for rid in responder_ids if rid in valid_ids][:3]
+        except asyncio.TimeoutError:
+            logger.warning("Responder selection timed out, using fallback")
+            return [c.id for c in candidates[:2]]
+        except Exception:
+            return [c.id for c in candidates[:2]]
+
+    # ── Tension & complication management ────────────────────────────
+
+    def update_tension(self, state: GameState) -> GameState:
+        """Update tension level based on game progression."""
+        alive = game_state.get_alive_characters(state)
+        total = len(state.characters)
+        alive_count = len(alive)
+
+        # Base tension rises as more players are eliminated
+        elimination_ratio = 1.0 - (alive_count / max(total, 1))
+        round_factor = min(state.round / 6.0, 1.0)  # Rises over 6 rounds
+
+        state.tension_level = min(1.0, 0.2 + elimination_ratio * 0.4 + round_factor * 0.3)
+
+        # Spike tension after night kills
+        recent_kills = [a for a in state.night_actions if a.result == "killed"]
+        if recent_kills:
+            state.tension_level = min(1.0, state.tension_level + 0.15)
+
+        return state
+
+    def should_inject_complication(self, state: GameState) -> bool:
+        """Determine if discussion is stalling and needs a complication."""
+        round_msgs = [m for m in state.messages if m.round == state.round]
+        if len(round_msgs) < 6:
+            return False  # Too early in discussion
+
+        # Check if recent messages are repetitive (low info content)
+        recent = round_msgs[-4:]
+        unique_speakers = len({m.speaker_id for m in recent})
+        if unique_speakers <= 1:
+            return True  # Only one person talking — stalling
+
+        # Check if no accusations in recent messages
+        accusation_kw = {"suspect", "traitor", "lying", "accuse", "vote", "eliminate"}
+        recent_text = " ".join(m.content.lower() for m in recent)
+        has_accusations = any(kw in recent_text for kw in accusation_kw)
+        if not has_accusations and len(round_msgs) > 8:
+            return True  # Lots of discussion but no one making moves
+
+        # Random chance increases with round number
+        if random.random() < 0.1 * state.round:
+            return True
+
+        return False
+
+    async def inject_complication(self, state: GameState) -> tuple[GameState, str]:
+        """Generate and inject a dynamic complication into the game."""
+        comp_type = random.choice(list(COMPLICATION_TYPES.keys()))
+        comp_desc = COMPLICATION_TYPES[comp_type]
+
+        event = GameEvent(
+            event_type=comp_type,
+            description=comp_desc,
+            round=state.round,
+            injected_at_message=len(state.messages),
+        )
+        state.game_events.append(event)
+
+        # Boost tension on complication
+        state.tension_level = min(1.0, state.tension_level + 0.1)
+
+        # Generate dramatic narration for the complication
+        narration = await self._generate_narration(state, "complication", {
+            "complication_type": comp_type,
+            "description": comp_desc,
+        })
+
+        return state, narration
+
+    # ── Narration ─────────────────────────────────────────────────────
+
+    async def _generate_narration(
+        self, state: GameState, event_type: str, extra: dict
+    ) -> str:
+        """Generate dramatic narration via Mistral Large 3 with timeout."""
+        template = NARRATION_TEMPLATES.get(event_type, "Something happens in the game.")
+        try:
+            event_text = template.format(**extra)
+        except (KeyError, IndexError):
+            event_text = template
+
+        # Add tension context to narration
+        tension_hint = ""
+        if state.tension_level > 0.7:
+            tension_hint = " The atmosphere is electric with suspicion and dread."
+        elif state.tension_level > 0.4:
+            tension_hint = " Tension hangs thick in the air."
+
+        system = NARRATION_SYSTEM.format(
+            world_title=state.world.title,
+            setting=state.world.setting,
+            flavor_text=state.world.flavor_text,
+        )
+
+        if self._narration_injection:
+            system += "\n\n" + self._narration_injection
+
+        try:
+            response = await asyncio.wait_for(
+                self._mistral.chat.complete_async(
+                    model="mistral-large-latest",
+                    messages=[
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": event_text + tension_hint},
+                    ],
+                    temperature=0.7,
+                ),
+                timeout=15.0,
+            )
+            return response.choices[0].message.content
+        except asyncio.TimeoutError:
+            logger.warning("Narration generation timed out for %s", event_type)
+            return event_text
+        except Exception:
+            return event_text

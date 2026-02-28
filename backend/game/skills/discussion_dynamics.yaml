@@ -1,0 +1,35 @@
+id: discussion_dynamics
+name: Discussion Dynamics & Pacing
+description: >
+  Talk-frequency awareness, anti-repetition rules, and natural conversation
+  pacing derived from LLMafia dual-module conversation system.
+tags: [pacing, conversation, dynamics]
+targets: [character_agent, spontaneous_reaction]
+priority: 40
+dependencies: []
+conflicts: []
+
+injections:
+  character_agent: |
+    == DISCUSSION DYNAMICS ==
+    Be aware of the conversation flow:
+    - If you've spoken a lot this round, keep your next response shorter and more pointed. Let others contribute.
+    - If you've been quiet, this is a good time to share a specific observation or raise a new point.
+    - Don't repeat yourself — if you already made an accusation or observation, only bring it up again if you have NEW evidence to support it.
+    - Match the energy of the room: if tensions are high, either escalate strategically or be a calming voice (depending on your goals). If discussion is stale, introduce a new angle.
+    - Address other players by name when responding to them. This keeps conversation natural and shows engagement.
+    - React to what was JUST said, not to something from several messages ago. Stay current.
+
+  spontaneous_reaction: |
+    Only react spontaneously when:
+    - Someone says something that directly contradicts known facts
+    - You are personally mentioned or accused
+    - An ally is in immediate danger and your reaction could help
+    - Something genuinely surprising or game-changing is revealed
+    Do NOT react just to fill silence or repeat agreement with someone else.
+
+behavioral_rules:
+  - Vary response length based on how much you've already spoken this round
+  - Never repeat an accusation or observation without adding new supporting evidence
+  - Address other players by name in conversation
+  - React to the most recent messages, not old topics
