@@ -34,7 +34,13 @@ import { seedToColor } from "@/components/CharacterCard";
 import LanguageToggle from "@/components/LanguageToggle";
 
 const RoundtableScene = dynamic(
-  () => import("@/components/scene/RoundtableScene"),
+  () =>
+    import("@/components/scene/RoundtableScene").catch((err) => {
+      // next/dynamic with ssr:false silently swallows import errors → white screen.
+      // Log explicitly so the real error is visible in console.
+      console.error("[COUNCIL] Failed to load 3D scene:", err);
+      throw err;
+    }),
   {
     ssr: false,
     loading: () => (

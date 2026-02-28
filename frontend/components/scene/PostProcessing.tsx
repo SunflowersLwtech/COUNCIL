@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
   EffectComposer as PMEffectComposer,
@@ -46,46 +46,60 @@ interface PostProcessingProps {
 export function PostProcessing({ gamePhase = "discussion", round = 1 }: PostProcessingProps) {
   const { gl, scene, camera, size } = useThree();
 
-  // Create effects once
-  const bloom = useMemo(
-    () =>
-      new BloomEffect({
+  const [disabled, setDisabled] = useState(false);
+
+  // Create effects once — wrapped in try/catch to survive shader compilation failures
+  const bloom = useMemo(() => {
+    try {
+      return new BloomEffect({
         intensity: DEFAULT_PRESET.bloomIntensity,
         luminanceThreshold: DEFAULT_PRESET.bloomThreshold,
         luminanceSmoothing: 0.9,
         mipmapBlur: true,
         kernelSize: KernelSize.LARGE,
-      }),
-    [],
-  );
+      });
+    } catch (err) {
+      console.error("[COUNCIL] BloomEffect creation failed:", err);
+      return null;
+    }
+  }, []);
 
-  const vignette = useMemo(
-    () =>
-      new VignetteEffect({
+  const vignette = useMemo(() => {
+    try {
+      return new VignetteEffect({
         offset: DEFAULT_PRESET.vignetteOffset,
         darkness: DEFAULT_PRESET.vignetteDarkness,
         blendFunction: BlendFunction.NORMAL,
-      }),
-    [],
-  );
+      });
+    } catch (err) {
+      console.error("[COUNCIL] VignetteEffect creation failed:", err);
+      return null;
+    }
+  }, []);
 
   // Build composer imperatively
   const composer = useMemo(() => {
-    const c = new PMEffectComposer(gl);
-    c.addPass(new RenderPass(scene, camera));
-    c.addPass(new EffectPass(camera, bloom, vignette));
-    return c;
+    if (!bloom || !vignette) return null;
+    try {
+      const c = new PMEffectComposer(gl);
+      c.addPass(new RenderPass(scene, camera));
+      c.addPass(new EffectPass(camera, bloom, vignette));
+      return c;
+    } catch (err) {
+      console.error("[COUNCIL] EffectComposer creation failed:", err);
+      return null;
+    }
   }, [gl, scene, camera, bloom, vignette]);
 
   // Keep composer in sync with viewport size
   useEffect(() => {
-    composer.setSize(size.width, size.height);
+    composer?.setSize(size.width, size.height);
   }, [composer, size]);
 
   // Dispose on unmount
   useEffect(() => {
     return () => {
-      composer.dispose();
+      composer?.dispose();
     };
   }, [composer]);
 
@@ -93,41 +107,56 @@ export function PostProcessing({ gamePhase = "discussion", round = 1 }: PostProc
   const currentValues = useRef({ ...DEFAULT_PRESET });
 
   // Per-frame: lerp effect parameters + render
+  // Priority 1 suppresses R3F's internal render — we MUST always render something
   useFrame((_, delta) => {
-    const target = PHASE_PRESETS[gamePhase] || DEFAULT_PRESET;
-
-    // Escalating intensity per round
-    const roundEscalation = Math.max(0, (round - 1) * 0.03);
-    const bloomEscalation = Math.max(0, (round - 1) * 0.02);
-
-    const targetDarkness = Math.min(1.0, target.vignetteDarkness + roundEscalation);
-    const targetBloom = Math.min(1.2, target.bloomIntensity + bloomEscalation);
-
-    // Lerp speed: ~2.5s transition
-    const lerpSpeed = 1.5 * delta;
-    const cv = currentValues.current;
-    cv.bloomIntensity += (targetBloom - cv.bloomIntensity) * lerpSpeed;
-    cv.bloomThreshold += (target.bloomThreshold - cv.bloomThreshold) * lerpSpeed;
-    cv.vignetteOffset += (target.vignetteOffset - cv.vignetteOffset) * lerpSpeed;
-    cv.vignetteDarkness += (targetDarkness - cv.vignetteDarkness) * lerpSpeed;
-
-    // Apply to effects (using typed getters/setters)
-    bloom.intensity = cv.bloomIntensity;
-    bloom.luminanceMaterial.threshold = cv.bloomThreshold;
-    vignette.offset = cv.vignetteOffset;
-    vignette.darkness = cv.vignetteDarkness;
-
-    // Render through composer instead of default R3F render
-    composer.render(delta);
-  }, 1); // Priority 1 = runs after default scene updates but replaces default render
-
-  // Disable R3F's default render loop since we render via composer
-  useEffect(() => {
-    gl.autoClear = false;
-    return () => {
+    // When disabled or composer unavailable, fall back to standard GL render
+    // so the scene is still visible (avoids white screen)
+    if (disabled || !composer) {
       gl.autoClear = true;
-    };
-  }, [gl]);
+      gl.render(scene, camera);
+      return;
+    }
+
+    try {
+      gl.autoClear = false;
+
+      const target = PHASE_PRESETS[gamePhase] || DEFAULT_PRESET;
+
+      // Escalating intensity per round
+      const roundEscalation = Math.max(0, (round - 1) * 0.03);
+      const bloomEscalation = Math.max(0, (round - 1) * 0.02);
+
+      const targetDarkness = Math.min(1.0, target.vignetteDarkness + roundEscalation);
+      const targetBloom = Math.min(1.2, target.bloomIntensity + bloomEscalation);
+
+      // Lerp speed: ~2.5s transition
+      const lerpSpeed = 1.5 * delta;
+      const cv = currentValues.current;
+      cv.bloomIntensity += (targetBloom - cv.bloomIntensity) * lerpSpeed;
+      cv.bloomThreshold += (target.bloomThreshold - cv.bloomThreshold) * lerpSpeed;
+      cv.vignetteOffset += (target.vignetteOffset - cv.vignetteOffset) * lerpSpeed;
+      cv.vignetteDarkness += (targetDarkness - cv.vignetteDarkness) * lerpSpeed;
+
+      // Apply to effects
+      if (bloom) {
+        bloom.intensity = cv.bloomIntensity;
+        bloom.luminanceMaterial.threshold = cv.bloomThreshold;
+      }
+      if (vignette) {
+        vignette.offset = cv.vignetteOffset;
+        vignette.darkness = cv.vignetteDarkness;
+      }
+
+      // Render through composer instead of default R3F render
+      composer.render(delta);
+    } catch (err) {
+      console.error("[COUNCIL] PostProcessing disabled due to runtime error:", err);
+      // Immediately render fallback THIS frame so it's never blank
+      gl.autoClear = true;
+      gl.render(scene, camera);
+      setDisabled(true);
+    }
+  }, 1); // Priority 1 = runs after default scene updates but replaces default render
 
   return null; // No JSX — fully imperative
 }
