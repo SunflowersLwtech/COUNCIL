@@ -7,6 +7,7 @@ import GameLobby from "@/components/GameLobby";
 import GameBoard from "@/components/GameBoard";
 import CharacterCard, { seedToColor } from "@/components/CharacterCard";
 import { GameStateProvider, useGameState } from "@/hooks/useGameState";
+import { RoundtableProvider } from "@/hooks/useRoundtable";
 import { useVoice } from "@/hooks/useVoice";
 import { I18nProvider, useI18n, type Locale } from "@/lib/i18n";
 
@@ -169,19 +170,21 @@ function HomeInner() {
 
   return (
     <GameStateProvider onCharacterResponse={handleCharacterResponse}>
-      <div className="relative">
-        <div
-          style={{
-            position: "fixed",
-            top: 16,
-            right: 16,
-            zIndex: 50,
-          }}
-        >
-          <LanguageToggle />
+      <RoundtableProvider>
+        <div className="relative">
+          <div
+            style={{
+              position: "fixed",
+              top: 16,
+              right: 16,
+              zIndex: 50,
+            }}
+          >
+            <LanguageToggle />
+          </div>
+          <GameRouter />
         </div>
-        <GameRouter />
-      </div>
+      </RoundtableProvider>
     </GameStateProvider>
   );
 }
