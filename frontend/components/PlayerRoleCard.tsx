@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, Shield, Swords, Target, Users } from "lucide-react";
+import { Eye, EyeOff, Shield, Swords, Target, Users, User } from "lucide-react";
 import { useGameState } from "@/hooks/useGameState";
 import { seedToColor } from "@/components/CharacterCard";
 
@@ -16,20 +16,31 @@ export default function PlayerRoleCard() {
 
   return (
     <>
-      {/* Floating peek button */}
+      {/* Persistent mini badge — always visible */}
       <button
-        className="role-card-peek-btn"
+        className="player-badge"
         onClick={() => setIsOpen(true)}
-        title="Peek at your identity"
+        title="Click to see full identity"
         style={{
-          borderColor: isGhostMode ? "rgba(255,255,255,0.2)" : `${accentColor}40`,
-          boxShadow: `0 0 12px ${accentColor}20`,
+          borderColor: `${accentColor}60`,
+          boxShadow: `0 0 16px ${accentColor}25`,
         }}
       >
-        <Eye size={16} style={{ color: accentColor }} />
+        <div className="player-badge-icon" style={{ backgroundColor: `${accentColor}25`, color: accentColor }}>
+          <User size={14} />
+        </div>
+        <div className="player-badge-info">
+          <span className="player-badge-label">YOU</span>
+          <span className="player-badge-role" style={{ color: accentColor }}>
+            {playerRole.hidden_role}
+          </span>
+        </div>
+        <div className="player-badge-faction" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+          {playerRole.faction}
+        </div>
       </button>
 
-      {/* Modal overlay */}
+      {/* Full modal overlay */}
       {isOpen && (
         <div className="role-card-modal-overlay" onClick={() => setIsOpen(false)}>
           <div
@@ -108,7 +119,9 @@ export default function PlayerRoleCard() {
                   ? "You can investigate one player each night to learn their faction."
                   : playerRole.hidden_role.toLowerCase().includes("doctor")
                     ? "You can protect one player each night from being killed."
-                    : "You have no special night power. Use your wits during discussion."
+                    : playerRole.hidden_role.toLowerCase().includes("protect")
+                      ? "You can protect one player each night from being killed."
+                      : "You have no special night power. Use your wits during discussion."
               }
             </div>
 

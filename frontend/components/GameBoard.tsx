@@ -351,6 +351,20 @@ export default function GameBoard() {
         {/* ── Bottom: Input Bar ───────────────────────────── */}
         {showInput && (
           <div className="scene-input-bar">
+            {/* Player identity label */}
+            {game.playerRole && (
+              <div className="input-player-label">
+                <span className="input-player-you">YOU</span>
+                <span className="input-player-dot" style={{
+                  backgroundColor: game.playerRole.allies.length > 0 ? "#ef4444" : "#3b82f6"
+                }} />
+                <span className="input-player-role" style={{
+                  color: game.playerRole.allies.length > 0 ? "#ef4444" : "#3b82f6"
+                }}>
+                  {game.playerRole.hidden_role}
+                </span>
+              </div>
+            )}
             {/* Target indicator */}
             {targetChar && (
               <div className="input-target-indicator animate-fade-in-up">
@@ -434,6 +448,7 @@ export default function GameBoard() {
 /* ── Chat Message ───────────────────────────────────────── */
 
 function ChatMessage({ message }: { message: GameChatMessage }) {
+  const { playerRole } = useGameState();
   const isUser = message.role === "user";
   const isNarrator = message.role === "narrator";
   const isSystem = message.role === "system";
@@ -444,7 +459,7 @@ function ChatMessage({ message }: { message: GameChatMessage }) {
 
   if (isUser) {
     color = "#ff6b35";
-    name = "You";
+    name = playerRole ? `You (${playerRole.hidden_role})` : "You";
   } else if (isNarrator) {
     color = "#FFD700";
     name = "Narrator";

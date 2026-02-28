@@ -1234,6 +1234,41 @@ button:focus-visible {
   letter-spacing: 0.04em;
 }
 
+/* ── Input Player Identity Label ────────────────────────────── */
+
+.input-player-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.input-player-you {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  background: rgba(255, 107, 53, 0.15);
+  color: #ff6b35;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.input-player-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.input-player-role {
+  font-size: 11px;
+  font-weight: 600;
+}
+
 /* ── Input Target Indicator ─────────────────────────────────── */
 
 .input-target-indicator {
@@ -1430,27 +1465,69 @@ button:focus-visible {
    Player Role Card
    ═══════════════════════════════════════════════════════════════════ */
 
-.role-card-peek-btn {
+/* Persistent player identity badge — always visible during game */
+.player-badge {
   position: fixed;
   bottom: 100px;
   left: 20px;
   z-index: 14;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 12px;
   background: var(--glass);
   border: 1px solid var(--glass-border);
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  transition: all 0.25s ease;
+  color: var(--text-primary);
+}
+
+.player-badge:hover {
+  transform: translateY(-2px);
+  background: var(--bg-hover);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.player-badge-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(12px);
-  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.role-card-peek-btn:hover {
-  transform: scale(1.1);
-  background: var(--bg-hover);
+.player-badge-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.player-badge-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.player-badge-role {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.player-badge-faction {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .role-card-modal-overlay {

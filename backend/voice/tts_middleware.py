@@ -3,8 +3,11 @@
 import os
 import asyncio
 import io
+import logging
 from typing import AsyncGenerator
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -30,8 +33,11 @@ class VoiceMiddleware:
             try:
                 from elevenlabs import ElevenLabs
                 self.client = ElevenLabs(api_key=api_key)
+                logger.info("ElevenLabs client initialized (key=%s...)", api_key[:8])
             except ImportError:
-                pass
+                logger.warning("elevenlabs package not installed")
+        else:
+            logger.warning("ELEVENLABS_API_KEY not set — voice disabled")
         self._voice_id_cache: dict[str, str] = {}
         self._character_voices: dict[str, str] = {}
 
@@ -60,6 +66,8 @@ class VoiceMiddleware:
         voice_id = await self._resolve_voice_id(voice_name)
 
         try:
+            logger.info("TTS request: agent=%s, voice=%s, voice_id=%s, text_len=%d",
+                        agent_id, voice_name, voice_id, len(text))
             audio_iter = await asyncio.to_thread(
                 self.client.text_to_speech.convert,
                 text=text,
@@ -70,8 +78,11 @@ class VoiceMiddleware:
             buf = io.BytesIO()
             for chunk in audio_iter:
                 buf.write(chunk)
-            return buf.getvalue()
-        except Exception:
+            result = buf.getvalue()
+            logger.info("TTS success: %d bytes", len(result))
+            return result
+        except Exception as e:
+            logger.error("TTS generation failed: %s: %s", type(e).__name__, e)
             return None
 
     async def speech_to_text(self, audio_bytes: bytes) -> str | None:
@@ -158,8 +169,10 @@ class VoiceMiddleware:
                 name_lower = voice.name.lower()
                 if name_lower == target or name_lower.startswith(target + " "):
                     self._voice_id_cache[voice_name] = voice.voice_id
+                    logger.info("Resolved voice '%s' → %s", voice_name, voice.voice_id)
                     return voice.voice_id
-        except Exception:
-            pass
+            logger.warning("Voice '%s' not found in ElevenLabs account", voice_name)
+        except Exception as e:
+            logger.error("Voice resolution failed: %s: %s", type(e).__name__, e)
 
         return voice_name
