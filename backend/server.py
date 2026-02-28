@@ -42,9 +42,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="COUNCIL API", version="0.2.0", lifespan=lifespan)
 
+_default_origins = "http://localhost:3000,http://localhost:5173"
+_origins = os.environ.get("CORS_ORIGINS", _default_origins).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
