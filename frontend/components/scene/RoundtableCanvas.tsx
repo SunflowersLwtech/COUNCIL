@@ -2,13 +2,14 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Stars } from "@react-three/drei";
+import { Stars, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { SceneLighting } from "./SceneLighting";
 import { Table } from "./Table";
 import { AgentFigure } from "./AgentFigure";
 import { AgentNameplate } from "./AgentNameplate";
 import { CameraRig } from "./CameraRig";
+import { PostProcessing } from "./PostProcessing";
 import {
   getSeatPosition,
   type CameraView,
@@ -24,12 +25,13 @@ interface RoundtableCanvasProps {
 }
 
 /* ── Floating particles (firefly effect) ─────────────────────────── */
-function FloatingParticles({ count = 80 }: { count?: number }) {
+function FloatingParticles({ count = 100 }: { count?: number }) {
   const meshRef = useRef<THREE.Points>(null);
 
-  const [positions, velocities] = useMemo(() => {
+  const [positions, velocities, sizes] = useMemo(() => {
     const pos = new Float32Array(count * 3);
     const vel = new Float32Array(count * 3);
+    const sz = new Float32Array(count);
     for (let i = 0; i < count; i++) {
       pos[i * 3] = (Math.random() - 0.5) * 14;
       pos[i * 3 + 1] = Math.random() * 5 + 0.5;
@@ -37,8 +39,9 @@ function FloatingParticles({ count = 80 }: { count?: number }) {
       vel[i * 3] = (Math.random() - 0.5) * 0.003;
       vel[i * 3 + 1] = (Math.random() - 0.5) * 0.002;
       vel[i * 3 + 2] = (Math.random() - 0.5) * 0.003;
+      sz[i] = 0.02 + Math.random() * 0.06;
     }
-    return [pos, vel];
+    return [pos, vel, sz];
   }, [count]);
 
   useFrame(() => {
@@ -68,6 +71,12 @@ function FloatingParticles({ count = 80 }: { count?: number }) {
           count={count}
           itemSize={3}
         />
+        <bufferAttribute
+          attach="attributes-size"
+          args={[sizes, 1]}
+          count={count}
+          itemSize={1}
+        />
       </bufferGeometry>
       <pointsMaterial
         size={0.04}
@@ -84,6 +93,14 @@ function FloatingParticles({ count = 80 }: { count?: number }) {
 
 /* ── Ground grid (sci-fi floor) ──────────────────────────────────── */
 function SciFiFloor() {
+  const spinRingRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (spinRingRef.current) {
+      spinRingRef.current.rotation.z = state.clock.elapsedTime * 0.12;
+    }
+  });
+
   return (
     <group>
       {/* Reflective dark floor */}
@@ -92,7 +109,7 @@ function SciFiFloor() {
         position={[0, -0.01, 0]}
         receiveShadow
       >
-        <circleGeometry args={[10, 64]} />
+        <circleGeometry args={[12, 64]} />
         <meshStandardMaterial
           color="#08081a"
           metalness={0.8}
@@ -103,6 +120,38 @@ function SciFiFloor() {
       {/* Subtle radial glow on floor under table */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
         <ringGeometry args={[1.5, 3.2, 64]} />
+        <meshBasicMaterial
+          color="#ff6b35"
+          transparent
+          opacity={0.04}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Concentric floor rings for grid effect */}
+      {[4, 6, 8].map((r) => (
+        <mesh key={r} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+          <ringGeometry args={[r - 0.01, r + 0.01, 64]} />
+          <meshBasicMaterial
+            color="#4466ff"
+            transparent
+            opacity={0.02}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+
+      {/* Slowly rotating accent ring */}
+      <mesh
+        ref={spinRingRef}
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.008, 0]}
+      >
+        <ringGeometry args={[3.4, 3.5, 64]} />
         <meshBasicMaterial
           color="#ff6b35"
           transparent
@@ -127,6 +176,10 @@ export function RoundtableCanvas({
   return (
     <>
       <SceneLighting speakingAgentId={speakingAgentId} agents={agents} />
+
+      {/* Environment map for reflections on metallic surfaces */}
+      <Environment preset="night" background={false} />
+
       <Table />
       {agents.map((agent) => {
         const pos = getSeatPosition(agent.seatIndex, totalSeats);
@@ -155,18 +208,32 @@ export function RoundtableCanvas({
         agents={agents}
       />
 
-      {/* Atmosphere */}
+      {/* Atmosphere – enhanced stars */}
       <Stars
-        radius={15}
+        radius={20}
         depth={40}
-        count={1500}
+        count={2500}
         factor={3}
         saturation={0}
         fade
         speed={0.5}
       />
-      <FloatingParticles count={60} />
+      {/* Blue accent stars at closer range */}
+      <Stars
+        radius={8}
+        depth={20}
+        count={500}
+        factor={5}
+        saturation={0.8}
+        fade
+        speed={0.3}
+      />
+
+      <FloatingParticles count={100} />
       <SciFiFloor />
+
+      {/* Post-processing effects (bloom + vignette) */}
+      <PostProcessing />
     </>
   );
 }

@@ -72,6 +72,7 @@ function TensionBar({ tension }: { tension: number }) {
 
 function CharacterRoster() {
   const game = useGameState();
+  const roundtable = useRoundtable();
   const { t } = useI18n();
 
   if (!game.session) return null;
@@ -85,11 +86,12 @@ function CharacterRoster() {
         const color = seedToColor(char.avatar_seed || char.id);
         const initial = char.name.charAt(0).toUpperCase();
         const isTarget = game.chatTarget === char.id;
+        const isSpeaking = roundtable.speakingAgentId === char.id;
 
         return (
           <button
             key={char.id}
-            className={`roster-avatar ${isTarget ? "roster-avatar-targeted" : ""}`}
+            className={`roster-avatar ${isTarget ? "roster-avatar-targeted" : ""} ${isSpeaking ? "roster-avatar-speaking" : ""}`}
             style={{
               "--avatar-color": color,
               borderColor: isTarget ? "var(--accent)" : "transparent",

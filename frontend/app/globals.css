@@ -173,10 +173,17 @@ button:focus-visible {
 /* ── Glass Card ──────────────────────────────────────────────────── */
 
 .glass-card {
-  background: var(--glass);
-  backdrop-filter: blur(16px);
+  background: linear-gradient(
+    135deg,
+    rgba(18, 18, 35, 0.8) 0%,
+    rgba(12, 12, 24, 0.75) 100%
+  );
+  backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
-  border-radius: 12px;
+  border-radius: 14px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* ── Header ──────────────────────────────────────────────────────── */
@@ -513,7 +520,8 @@ button:focus-visible {
   align-items: center;
   gap: 6px;
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
   font-size: 11px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.5);
@@ -542,15 +550,17 @@ button:focus-visible {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 .chat-panel-msg:hover {
   border-color: rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.06);
+  transform: translateX(2px);
 }
 .chat-panel-msg-user {
   background: rgba(255, 107, 53, 0.08);
   border-color: rgba(255, 107, 53, 0.15);
+  border-left: 3px solid var(--accent);
 }
 .chat-panel-msg-thinking {
   background: rgba(255, 255, 255, 0.02);
@@ -576,8 +586,8 @@ button:focus-visible {
   letter-spacing: 0.01em;
 }
 .chat-msg-content {
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 13.5px;
+  line-height: 1.6;
   color: rgba(255, 255, 255, 0.92);
   word-break: break-word;
   white-space: pre-wrap;
@@ -819,7 +829,9 @@ button:focus-visible {
 }
 .phase-dot-active {
   background: var(--accent);
-  box-shadow: 0 0 8px rgba(255, 107, 53, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2), 0 0 10px rgba(255, 107, 53, 0.5);
+  width: 14px;
+  height: 14px;
 }
 .phase-dot-completed {
   background: var(--positive);
@@ -830,8 +842,8 @@ button:focus-visible {
 }
 .phase-connector {
   width: 24px;
-  height: 2px;
-  border-radius: 1px;
+  height: 3px;
+  border-radius: 2px;
 }
 
 /* ── Game Top Bar ───────────────────────────────────────────── */
@@ -845,12 +857,13 @@ button:focus-visible {
   align-items: center;
   gap: 16px;
   padding: 10px 16px;
-  background: rgba(10, 10, 22, 0.85);
-  backdrop-filter: blur(16px);
+  background: linear-gradient(180deg, rgba(14, 14, 28, 0.9) 0%, rgba(10, 10, 22, 0.85) 100%);
+  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   pointer-events: auto;
   z-index: 15;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* ── Tension Bar ────────────────────────────────────────────── */
@@ -895,13 +908,14 @@ button:focus-visible {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 4px;
+  padding: 6px;
   border: 2px solid transparent;
   border-radius: 12px;
-  background: rgba(10, 10, 22, 0.7);
-  backdrop-filter: blur(8px);
+  background: rgba(10, 10, 22, 0.75);
+  backdrop-filter: blur(12px);
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .roster-avatar:hover {
@@ -933,6 +947,8 @@ button:focus-visible {
   font-weight: 700;
   color: white;
   transition: box-shadow 0.2s ease;
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
 }
 
 .roster-avatar-targeted .roster-avatar-circle {
@@ -965,15 +981,19 @@ button:focus-visible {
   right: 16px;
   width: min(380px, calc(100vw - 120px));
   max-height: calc(100vh - 180px);
-  background: rgba(10, 10, 22, 0.88);
-  backdrop-filter: blur(16px);
+  background: linear-gradient(
+    180deg,
+    rgba(14, 14, 28, 0.92) 0%,
+    rgba(10, 10, 22, 0.88) 100%
+  );
+  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   z-index: 12;
 }
 
@@ -1843,4 +1863,86 @@ button:focus-visible {
   font-size: 14px;
   color: var(--text-secondary);
   margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Roster Speaking State
+   ═══════════════════════════════════════════════════════════════════ */
+
+.roster-avatar-speaking {
+  border-color: var(--accent) !important;
+  animation: glow-pulse 1.5s ease-in-out infinite;
+}
+
+.roster-avatar-speaking .roster-avatar-circle {
+  box-shadow: 0 0 12px var(--avatar-color, var(--accent));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Responsive Breakpoints
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .chat-panel {
+    width: calc(100vw - 80px);
+    top: auto;
+    bottom: 80px;
+    right: 8px;
+    max-height: 40vh;
+  }
+
+  .character-roster {
+    top: auto;
+    bottom: 80px;
+    left: 8px;
+    flex-direction: row;
+    overflow-x: auto;
+    max-width: calc(100vw - 200px);
+  }
+
+  .game-top-bar {
+    left: 8px;
+    right: 8px;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .scene-input-bar {
+    width: calc(100% - 16px);
+    bottom: 8px;
+  }
+
+  .roster-avatar-circle {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .roster-avatar-name {
+    display: none;
+  }
+
+  .player-badge {
+    bottom: 90px;
+    left: 8px;
+    padding: 6px 10px 6px 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-panel {
+    width: calc(100vw - 16px);
+    right: 8px;
+    max-height: 35vh;
+  }
+
+  .game-top-bar {
+    flex-wrap: wrap;
+  }
+
+  .tension-bar-container {
+    order: 2;
+    max-width: 100%;
+    width: 100%;
+  }
 }

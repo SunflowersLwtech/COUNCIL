@@ -33,8 +33,8 @@ export function SceneLighting({ speakingAgentId, agents }: SceneLightingProps) {
 
   return (
     <>
-      {/* Base ambient – keep low for dramatic look */}
-      <ambientLight intensity={0.25} color="#8888cc" />
+      {/* Base ambient – lowered for dramatic contrast */}
+      <ambientLight intensity={0.15} color="#8888cc" />
 
       {/* Main directional – cool tone key light */}
       <directionalLight
@@ -61,7 +61,34 @@ export function SceneLighting({ speakingAgentId, agents }: SceneLightingProps) {
         decay={2}
       />
 
-      {/* Subtle rim light from behind */}
+      {/* Under-table purple glow */}
+      <pointLight
+        position={[0, 0.3, 0]}
+        intensity={0.2}
+        color="#6644cc"
+        distance={5}
+        decay={2}
+      />
+
+      {/* Cyan rim light – left-front */}
+      <pointLight
+        position={[-4, 2, 3]}
+        intensity={0.1}
+        color="#00ccff"
+        distance={10}
+        decay={2}
+      />
+
+      {/* Magenta rim light – right-back */}
+      <pointLight
+        position={[4, 2, -3]}
+        intensity={0.08}
+        color="#cc44ff"
+        distance={10}
+        decay={2}
+      />
+
+      {/* Blue rim light from behind */}
       <pointLight
         position={[0, 2, -5]}
         intensity={0.15}
@@ -70,20 +97,18 @@ export function SceneLighting({ speakingAgentId, agents }: SceneLightingProps) {
         decay={2}
       />
 
-      {/* Spotlight follows speaking agent */}
-      {speakingAgentId && (
-        <spotLight
-          ref={spotlightRef}
-          position={[0, 6, 0]}
-          angle={0.25}
-          penumbra={0.6}
-          intensity={1.2}
-          color="#ffffff"
-          castShadow
-          distance={12}
-          decay={2}
-        />
-      )}
+      {/* Spotlight follows speaking agent (always rendered, points to center when idle) */}
+      <spotLight
+        ref={spotlightRef}
+        position={[0, 6, 0]}
+        angle={0.3}
+        penumbra={0.6}
+        intensity={speakingAgentId ? 1.5 : 0.3}
+        color="#fff5e6"
+        castShadow
+        distance={12}
+        decay={2}
+      />
     </>
   );
 }

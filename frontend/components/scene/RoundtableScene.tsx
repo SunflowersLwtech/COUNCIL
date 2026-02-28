@@ -76,12 +76,17 @@ export default function RoundtableScene(props: RoundtableSceneProps) {
       <Canvas
         camera={{ position: [0, 1.6, -2.5], fov: 60 }}
         shadows
-        gl={{ antialias: true, alpha: false }}
+        gl={{
+          antialias: true,
+          alpha: false,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.1,
+        }}
         onCreated={({ gl, scene }) => {
           // Force dark background at every level
           gl.setClearColor("#060612", 1);
           scene.background = BG_COLOR;
-          scene.fog = new THREE.Fog("#060612", 8, 25);
+          scene.fog = new THREE.Fog("#060612", 10, 30);
         }}
       >
         <RoundtableCanvas {...props} />
