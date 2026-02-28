@@ -31,6 +31,7 @@ import NightActionPanel from "@/components/NightActionPanel";
 import GhostOverlay, { GhostRoleBadge } from "@/components/GhostOverlay";
 import PhaseTransition from "@/components/PhaseTransition";
 import { seedToColor } from "@/components/CharacterCard";
+import LanguageToggle from "@/components/LanguageToggle";
 
 const RoundtableScene = dynamic(
   () => import("@/components/scene/RoundtableScene"),
@@ -438,13 +439,14 @@ export default function GameBoard() {
         <div className="game-top-bar">
           <PhaseIndicator phase={game.phase} round={game.round} />
           <TensionBar tension={game.tension} />
+          <LanguageToggle />
         </div>
 
-        {/* ── Left: Character Roster ──────────────────────── */}
-        <CharacterRoster />
-
-        {/* ── Player Role Card (floating, always visible during game) ── */}
-        {game.playerRole && <PlayerRoleCard />}
+        {/* ── Left Panel: Character Roster + Player Badge ── */}
+        <div className="left-panel">
+          <CharacterRoster />
+          {game.playerRole && <PlayerRoleCard />}
+        </div>
 
         {/* ── Ghost Mode Overlay ──────────────────────────── */}
         {game.isGhostMode && <GhostOverlay />}

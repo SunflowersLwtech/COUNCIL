@@ -36,6 +36,7 @@ export interface GameChatMessage {
 
 interface GameStateCtx {
   phase: GamePhase;
+  isRecovering: boolean;
   session: GameSession | null;
   chatMessages: GameChatMessage[];
   isChatStreaming: boolean;
@@ -89,6 +90,7 @@ interface GameStateProviderProps {
 
 export function GameStateProvider({ children, onCharacterResponse }: GameStateProviderProps) {
   const [phase, setPhase] = useState<GamePhase>("upload");
+  const [isRecovering, setIsRecovering] = useState(false);
   const [session, setSession] = useState<GameSession | null>(null);
   const [chatMessages, setChatMessages] = useState<GameChatMessage[]>([]);
   const [isChatStreaming, setIsChatStreaming] = useState(false);
@@ -133,6 +135,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     const savedId = localStorage.getItem(STORAGE_KEY);
     if (!savedId || session) return;
 
+    setIsRecovering(true);
     (async () => {
       try {
         const data = await api.getGameState(savedId, true);
@@ -193,6 +196,8 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         }
       } catch {
         localStorage.removeItem(STORAGE_KEY);
+      } finally {
+        setIsRecovering(false);
       }
     })();
   }, []);
@@ -783,6 +788,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     <GameStateContext.Provider
       value={{
         phase,
+        isRecovering,
         session,
         chatMessages,
         isChatStreaming,

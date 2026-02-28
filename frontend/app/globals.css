@@ -64,6 +64,15 @@ button:focus-visible {
   background: var(--text-muted);
 }
 
+/* ── Global Language Toggle (non-game screens) ─────────────────── */
+
+.global-lang-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 50;
+}
+
 /* ── Animations ──────────────────────────────────────────────────── */
 
 @keyframes pulse-dot {
@@ -732,6 +741,15 @@ button:focus-visible {
   background: #060612 !important;
 }
 
+/* Scene overlay — transparent container, children opt-in to pointer events */
+.scene-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 /* ── COUNCIL Game Animations ──────────────────────────────────── */
 
 @keyframes card-flip {
@@ -979,17 +997,33 @@ button:focus-visible {
   transition: width 0.6s ease, box-shadow 0.6s ease;
 }
 
-/* ── Character Roster (left side) ───────────────────────────── */
+/* ── Left Panel (roster + player badge) ────────────────────── */
 
-.character-roster {
+.left-panel {
   position: absolute;
   top: 80px;
   left: 16px;
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 12;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  overflow-x: visible;
+  scrollbar-width: none;
+}
+.left-panel::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Character Roster (left side) ───────────────────────────── */
+
+.character-roster {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   pointer-events: auto;
-  z-index: 12;
 }
 
 .roster-avatar {
@@ -1261,7 +1295,7 @@ button:focus-visible {
   bottom: 16px;
   left: 50%;
   transform: translateX(-50%) translateY(100%);
-  width: min(560px, calc(100% - 32px));
+  width: min(640px, calc(100% - 32px));
   max-height: calc(100vh - 120px);
   pointer-events: auto;
   z-index: 20;
@@ -1869,10 +1903,6 @@ button:focus-visible {
 
 /* Persistent player identity badge — always visible during game */
 .player-badge {
-  position: fixed;
-  bottom: 100px;
-  left: 20px;
-  z-index: 14;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1884,6 +1914,7 @@ button:focus-visible {
   backdrop-filter: blur(16px);
   transition: all 0.25s ease;
   color: var(--text-primary);
+  pointer-events: auto;
 }
 
 .player-badge:hover {
@@ -2276,13 +2307,19 @@ button:focus-visible {
     height: 42px;
   }
 
-  .character-roster {
+  .left-panel {
     top: auto;
-    bottom: 80px;
+    bottom: 160px;
     left: 8px;
+    flex-direction: column;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .character-roster {
     flex-direction: row;
     overflow-x: auto;
-    max-width: calc(100vw - 200px);
+    max-width: calc(100vw - 120px);
   }
 
   .game-top-bar {
@@ -2303,8 +2340,6 @@ button:focus-visible {
   }
 
   .player-badge {
-    bottom: 90px;
-    left: 8px;
     padding: 6px 10px 6px 6px;
   }
 }
@@ -2318,6 +2353,19 @@ button:focus-visible {
     order: 2;
     max-width: 100%;
     width: 100%;
+  }
+
+  .left-panel {
+    bottom: 130px;
+    left: 8px;
+  }
+
+  .character-roster {
+    max-width: calc(100vw - 80px);
+  }
+
+  .action-drawer {
+    width: calc(100% - 16px);
   }
 }
 

@@ -1,36 +1,17 @@
 "use client";
 
 import { useCallback } from "react";
-import { Globe, Trophy, RotateCcw, Shield, Skull, Heart } from "lucide-react";
+import { Trophy, RotateCcw, Shield, Skull, Heart } from "lucide-react";
 import DocumentUpload from "@/components/DocumentUpload";
 import GameLobby from "@/components/GameLobby";
 import HowToPlay from "@/components/HowToPlay";
 import GameBoard from "@/components/GameBoard";
 import CharacterCard, { seedToColor } from "@/components/CharacterCard";
+import LanguageToggle from "@/components/LanguageToggle";
 import { GameStateProvider, useGameState } from "@/hooks/useGameState";
 import { RoundtableProvider } from "@/hooks/useRoundtable";
 import { useVoice } from "@/hooks/useVoice";
 import { I18nProvider, useI18n, type Locale } from "@/lib/i18n";
-
-function LanguageToggle() {
-  const { locale, setLocale } = useI18n();
-  const next: Locale = locale === "en" ? "zh" : "en";
-  return (
-    <button
-      onClick={() => setLocale(next)}
-      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors"
-      style={{
-        background: "var(--bg-hover)",
-        color: "var(--text-secondary)",
-        border: "1px solid var(--border)",
-      }}
-      title={locale === "en" ? "Switch to Chinese" : "Switch to English"}
-    >
-      <Globe size={14} />
-      {locale === "en" ? "EN" : "ZH"}
-    </button>
-  );
-}
 
 /* ── Game End Screen ──────────────────────────────────────────────── */
 
@@ -135,29 +116,69 @@ function GameEndScreen() {
 function GameRouter() {
   const game = useGameState();
 
+  if (game.isRecovering) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#060612",
+          color: "#888",
+          fontSize: "0.875rem",
+        }}
+      >
+        Restoring session...
+      </div>
+    );
+  }
+
+  // Game board manages its own language toggle in the top bar
+  const isGamePhase = ["discussion", "voting", "reveal", "night"].includes(game.phase);
+
+  const langToggle = !isGamePhase ? (
+    <div className="global-lang-toggle">
+      <LanguageToggle />
+    </div>
+  ) : null;
+
+  let content;
   switch (game.phase) {
     case "upload":
     case "parsing":
-      return <DocumentUpload />;
+      content = <DocumentUpload />;
+      break;
     case "lobby":
-      return <GameLobby />;
+      content = <GameLobby />;
+      break;
     case "howtoplay":
-      return (
+      content = (
         <HowToPlay
           onStart={game.startGame}
           worldTitle={game.session?.world_title}
         />
       );
+      break;
     case "discussion":
     case "voting":
     case "reveal":
     case "night":
-      return <GameBoard />;
+      content = <GameBoard />;
+      break;
     case "ended":
-      return <GameEndScreen />;
+      content = <GameEndScreen />;
+      break;
     default:
-      return <DocumentUpload />;
+      content = <DocumentUpload />;
   }
+
+  return (
+    <>
+      {langToggle}
+      {content}
+    </>
+  );
 }
 
 /* ── Home Inner ───────────────────────────────────────────────────── */
@@ -180,16 +201,6 @@ function HomeInner() {
     <GameStateProvider onCharacterResponse={handleCharacterResponse}>
       <RoundtableProvider>
         <div className="relative">
-          <div
-            style={{
-              position: "fixed",
-              top: 16,
-              right: 16,
-              zIndex: 50,
-            }}
-          >
-            <LanguageToggle />
-          </div>
           <GameRouter />
         </div>
       </RoundtableProvider>
