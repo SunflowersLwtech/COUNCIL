@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import {
   Send,
@@ -18,7 +18,6 @@ import { useGameState, type GameChatMessage } from "@/hooks/useGameState";
 import { useRoundtable } from "@/hooks/useRoundtable";
 import { useVoice } from "@/hooks/useVoice";
 import { useI18n } from "@/lib/i18n";
-import { useMemo } from "react";
 import { createAgent3DConfigs, AGENTS_3D } from "@/lib/scene-constants";
 import PhaseIndicator from "@/components/PhaseIndicator";
 import VotePanel from "@/components/VotePanel";
@@ -189,8 +188,42 @@ export default function GameBoard() {
     },
   });
 
+  // Camera follow: driven by chat messages (works even without TTS)
+  const speakingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastMsgCountRef = useRef(0);
+
   useEffect(() => {
-    roundtable.setSpeakingAgent(voice.speakingAgentId);
+    const msgs = game.chatMessages;
+    if (msgs.length <= lastMsgCountRef.current) {
+      lastMsgCountRef.current = msgs.length;
+      return;
+    }
+    lastMsgCountRef.current = msgs.length;
+
+    // Find the latest character message (non-thinking)
+    const latest = msgs[msgs.length - 1];
+    if (!latest || latest.isThinking) return;
+
+    const charId = latest.characterId;
+    if (!charId) return; // skip user/narrator/system
+
+    // Set speaking agent for camera follow
+    roundtable.setSpeakingAgent(charId);
+
+    // Clear after estimated "speaking" time based on text length
+    if (speakingTimerRef.current) clearTimeout(speakingTimerRef.current);
+    const duration = Math.max(2000, Math.min((latest.content?.length || 0) * 40, 8000));
+    speakingTimerRef.current = setTimeout(() => {
+      roundtable.setSpeakingAgent(null);
+    }, duration);
+  }, [game.chatMessages]);
+
+  // Also sync from TTS voice (when TTS is available, it overrides)
+  useEffect(() => {
+    if (voice.speakingAgentId) {
+      roundtable.setSpeakingAgent(voice.speakingAgentId);
+      if (speakingTimerRef.current) clearTimeout(speakingTimerRef.current);
+    }
   }, [voice.speakingAgentId]);
 
   // Build 3D agent configs from actual game characters (player + AI characters)
