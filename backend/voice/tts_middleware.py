@@ -18,8 +18,16 @@ def inject_emotion_tags(text: str, emotional_state) -> str:
         return f"[angry]{text}"
     if emotional_state.fear > 0.6:
         return f"[scared]{text}"
-    if emotional_state.happiness > 0.7:
+    if emotional_state.happiness > 0.7 and emotional_state.energy > 0.6:
         return f"[excited]{text}"
+    if emotional_state.happiness > 0.7:
+        return f"[laughs]{text}"
+    if emotional_state.curiosity > 0.7:
+        return f"[curious]{text}"
+    if emotional_state.trust < 0.3:
+        return f"[suspicious]{text}"
+    if emotional_state.energy < 0.2:
+        return f"[sighs]{text}"
     return text
 
 
@@ -94,13 +102,16 @@ class VoiceMiddleware:
             return None
 
         try:
+            audio_file = io.BytesIO(audio_bytes)
             result = await asyncio.to_thread(
                 self.client.speech_to_text.convert,
-                audio=audio_bytes,
-                model_id="scribe_v1",
+                file=audio_file,
+                model_id="scribe_v2",
+                tag_audio_events=True,
             )
             return result.text
-        except Exception:
+        except Exception as e:
+            logger.error("STT failed: %s: %s", type(e).__name__, e)
             return None
 
     async def stream_tts(self, text: str, voice_id: str) -> AsyncGenerator[bytes, None]:
@@ -120,7 +131,7 @@ class VoiceMiddleware:
 
         try:
             audio_iter = await asyncio.to_thread(
-                self.client.text_to_speech.convert,
+                self.client.text_to_speech.stream,
                 text=text,
                 voice_id=resolved_id,
                 model_id="eleven_v3",
@@ -128,7 +139,8 @@ class VoiceMiddleware:
             )
             for chunk in audio_iter:
                 yield chunk
-        except Exception:
+        except Exception as e:
+            logger.error("TTS stream failed: %s: %s", type(e).__name__, e)
             return
 
     async def generate_sfx(self, prompt: str, duration_seconds: float = 3.0) -> bytes | None:

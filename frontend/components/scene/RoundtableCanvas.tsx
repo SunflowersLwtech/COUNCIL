@@ -15,6 +15,7 @@ import {
   type CameraView,
   type Agent3DConfig,
 } from "@/lib/scene-constants";
+import type { GamePhase } from "@/lib/game-types";
 
 interface RoundtableCanvasProps {
   speakingAgentId: string | null;
@@ -22,6 +23,8 @@ interface RoundtableCanvasProps {
   cameraView: CameraView;
   autoFocusEnabled: boolean;
   agents: Agent3DConfig[];
+  gamePhase?: GamePhase;
+  round?: number;
 }
 
 /* ── Floating particles (firefly effect) ─────────────────────────── */
@@ -171,11 +174,13 @@ export function RoundtableCanvas({
   cameraView,
   autoFocusEnabled,
   agents,
+  gamePhase = "discussion",
+  round = 1,
 }: RoundtableCanvasProps) {
   const totalSeats = agents.length;
   return (
     <>
-      <SceneLighting speakingAgentId={speakingAgentId} agents={agents} />
+      <SceneLighting speakingAgentId={speakingAgentId} agents={agents} gamePhase={gamePhase} round={round} />
 
       {/* Environment map for reflections on metallic surfaces */}
       <Environment preset="night" background={false} />
@@ -232,8 +237,8 @@ export function RoundtableCanvas({
       <FloatingParticles count={100} />
       <SciFiFloor />
 
-      {/* Post-processing effects (bloom + vignette) */}
-      <PostProcessing />
+      {/* Post-processing effects (bloom + vignette) — phase-reactive */}
+      <PostProcessing gamePhase={gamePhase} round={round} />
     </>
   );
 }

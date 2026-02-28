@@ -7,7 +7,7 @@ import CharacterCard from "@/components/CharacterCard";
 
 export default function GameLobby() {
   const { t } = useI18n();
-  const { session, startGame, error } = useGameState();
+  const { session, showHowToPlay, error } = useGameState();
 
   if (!session) return null;
 
@@ -68,7 +68,7 @@ export default function GameLobby() {
         <div className="text-center">
           <button
             className="demo-btn text-lg px-12 py-4 flex items-center gap-3 mx-auto"
-            onClick={startGame}
+            onClick={showHowToPlay}
           >
             <Play size={20} />
             {t("game.lobby.startGame")}

@@ -124,6 +124,23 @@ class TestMultiAgentConversation:
             persona=char.persona,
             speaking_style=char.speaking_style,
             public_role=char.public_role,
+            secret=char.secret,
+            decision_making_style=char.decision_making_style,
+            want=char.want,
+            method=char.method,
+            moral_values=", ".join(char.moral_values),
+            sims_traits_jazz="",
+            mind_mirror_jazz="",
+            big_five=char.big_five,
+            mbti=char.mbti,
+            personality_summary=char.personality_summary,
+            emotional_modifier="",
+            current_mood=char.current_mood,
+            driving_need=char.driving_need,
+            relationships_jazz="",
+            memories_jazz="",
+            canon_facts_jazz="",
+            skill_injections="",
         )
 
         assert "Werewolf" in prompt

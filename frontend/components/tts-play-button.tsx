@@ -4,6 +4,7 @@ import { Volume2 } from "lucide-react";
 import { useState } from "react";
 import { generateTTS } from "@/lib/api";
 import { agentRoleToId } from "@/lib/agent-utils";
+import { playManagedAudio } from "@/lib/audio-manager";
 import { useI18n } from "@/lib/i18n";
 
 interface TTSPlayButtonProps {
@@ -27,16 +28,7 @@ export default function TTSPlayButton({ text, agentRole }: TTSPlayButtonProps) {
         return;
       }
 
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        setPlaying(false);
-      };
-      audio.onerror = () => {
-        URL.revokeObjectURL(url);
-        setPlaying(false);
-      };
+      const audio = playManagedAudio(blob, () => setPlaying(false));
       await audio.play();
     } catch {
       setPlaying(false);

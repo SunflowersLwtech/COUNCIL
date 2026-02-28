@@ -21,6 +21,15 @@ function seedToColor(seed: string): string {
   return CHAR_COLORS[Math.abs(hash) % CHAR_COLORS.length];
 }
 
+const EMOTION_EMOJI: Record<string, string> = {
+  angry: "\uD83D\uDE20",
+  fearful: "\uD83D\uDE1F",
+  happy: "\uD83D\uDE0A",
+  suspicious: "\uD83E\uDD28",
+  curious: "\uD83E\uDD14",
+  neutral: "",
+};
+
 interface CharacterCardProps {
   character: CharacterPublic;
   isSpeaking?: boolean;
@@ -28,6 +37,7 @@ interface CharacterCardProps {
   isSelected?: boolean;
   onClick?: () => void;
   compact?: boolean;
+  emotion?: string;
 }
 
 export default function CharacterCard({
@@ -37,6 +47,7 @@ export default function CharacterCard({
   isSelected = false,
   onClick,
   compact = false,
+  emotion,
 }: CharacterCardProps) {
   const color = seedToColor(character.avatar_seed || character.id);
   const initial = character.name.charAt(0).toUpperCase();
@@ -50,21 +61,39 @@ export default function CharacterCard({
     .filter(Boolean)
     .join(" ");
 
+  const emoji = emotion ? (EMOTION_EMOJI[emotion] || "") : "";
+
   return (
     <div className={cardClass} onClick={onClick}>
       <div className="flex items-center gap-3">
         {/* Avatar */}
-        <div
-          className="flex items-center justify-center rounded-full font-bold text-white shrink-0"
-          style={{
-            width: compact ? 36 : 44,
-            height: compact ? 36 : 44,
-            backgroundColor: color,
-            fontSize: compact ? 14 : 18,
-            boxShadow: isSpeaking ? `0 0 12px ${color}80` : undefined,
-          }}
-        >
-          {initial}
+        <div className="relative shrink-0">
+          <div
+            className="flex items-center justify-center rounded-full font-bold text-white"
+            style={{
+              width: compact ? 36 : 44,
+              height: compact ? 36 : 44,
+              backgroundColor: color,
+              fontSize: compact ? 14 : 18,
+              boxShadow: isSpeaking ? `0 0 12px ${color}80` : undefined,
+            }}
+          >
+            {initial}
+          </div>
+          {emoji && (
+            <span
+              className="absolute"
+              style={{
+                bottom: -2,
+                right: -4,
+                fontSize: compact ? 11 : 13,
+                lineHeight: 1,
+                filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5))",
+              }}
+            >
+              {emoji}
+            </span>
+          )}
         </div>
 
         {/* Info */}

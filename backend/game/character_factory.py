@@ -1,8 +1,10 @@
 """Character generation from WorldModel using Mistral Large 3."""
 
+import asyncio
 import os
 import json
 import uuid
+import logging
 from mistralai import Mistral
 from dotenv import load_dotenv
 
@@ -10,16 +12,31 @@ from backend.models.game_models import WorldModel, Character, SimsTraits, MindMi
 from backend.game.prompts import CHARACTER_GENERATION_SYSTEM, CHARACTER_GENERATION_USER
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 VOICE_POOL = ["Sarah", "George", "Charlie", "Alice", "Harry", "Emily", "James", "Lily"]
+
+# Timeout for Mistral API calls (seconds).
+# Character generation with detailed traits (big five, MBTI, sims, mind mirror)
+# requires ~60-70s from the Mistral API.
+_MISTRAL_TIMEOUT = 120
+
+# Retry configuration for character generation
+_MAX_RETRIES = 3
+_BASE_DELAY = 2.0
+
+
+def _new_mistral_client() -> Mistral:
+    """Create a fresh Mistral client to avoid stale httpx connection pools."""
+    return Mistral(api_key=os.environ["MISTRAL_API_KEY"])
 
 
 class CharacterFactory:
     def __init__(self):
-        self._mistral = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+        pass  # No longer reuse a single Mistral client
 
     async def generate_characters(
-        self, world: WorldModel, num_characters: int = 5
+        self, world: WorldModel, num_characters: int = 7
     ) -> list[Character]:
         """Generate characters from a WorldModel via a single Mistral call."""
         num_characters = max(3, min(num_characters, 8))
@@ -38,8 +55,10 @@ class CharacterFactory:
             num_characters=num_characters,
         )
 
-        try:
-            response = await self._mistral.chat.complete_async(
+        def _sync_generate():
+            """Run Mistral call in a thread to avoid uvicorn event loop issues."""
+            client = _new_mistral_client()
+            resp = client.chat.complete(
                 model="mistral-large-latest",
                 messages=[
                     {"role": "system", "content": system},
@@ -48,11 +67,35 @@ class CharacterFactory:
                 temperature=0.7,
                 response_format={"type": "json_object"},
             )
-            data = json.loads(response.choices[0].message.content)
-            raw_chars = data.get("characters", [])
-            if not isinstance(raw_chars, list) or len(raw_chars) == 0:
-                return self._fallback_characters(world, num_characters)
-        except Exception:
+            return resp
+
+        last_error = None
+        raw_chars = []
+        for attempt in range(_MAX_RETRIES):
+            try:
+                logger.info("Character generation attempt %d/%d...", attempt + 1, _MAX_RETRIES)
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(_sync_generate),
+                    timeout=_MISTRAL_TIMEOUT,
+                )
+                data = json.loads(response.choices[0].message.content)
+                raw_chars = data.get("characters", [])
+                if isinstance(raw_chars, list) and len(raw_chars) > 0:
+                    logger.info("Character generation succeeded on attempt %d", attempt + 1)
+                    break
+                last_error = "Empty or invalid response"
+            except asyncio.TimeoutError:
+                last_error = f"Timeout after {_MISTRAL_TIMEOUT}s"
+            except Exception as e:
+                last_error = f"{type(e).__name__}: {e}"
+
+            if attempt < _MAX_RETRIES - 1:
+                delay = _BASE_DELAY * (2 ** attempt)
+                logger.warning("Character gen attempt %d failed (%s), retry in %.1fs",
+                              attempt + 1, last_error, delay)
+                await asyncio.sleep(delay)
+        else:
+            logger.error("All %d attempts failed (%s), using fallback", _MAX_RETRIES, last_error)
             return self._fallback_characters(world, num_characters)
 
         characters = []
@@ -105,6 +148,53 @@ class CharacterFactory:
 
             characters.append(char)
 
+        # Guarantee at least 1 Doctor/Protector among good-faction characters
+        characters = self._ensure_doctor_role(characters, world)
+
+        return characters
+
+    def _ensure_doctor_role(
+        self, characters: list[Character], world: WorldModel
+    ) -> list[Character]:
+        """Ensure at least one good-faction character has a Doctor/Protector role."""
+        doctor_keywords = {"doctor", "protector", "protect", "healer", "medic"}
+        has_doctor = any(
+            any(kw in c.hidden_role.lower() for kw in doctor_keywords)
+            for c in characters
+        )
+        if has_doctor:
+            return characters
+
+        evil_factions = {
+            f.get("name", "")
+            for f in world.factions
+            if f.get("alignment", "").lower() == "evil"
+        }
+
+        # Find a good-faction character without a special role to reassign
+        candidates = [
+            c for c in characters
+            if c.faction not in evil_factions
+            and "seer" not in c.hidden_role.lower()
+            and "investigat" not in c.hidden_role.lower()
+        ]
+        if not candidates:
+            return characters
+
+        # Pick a random non-special good character
+        import random as _random
+        target = _random.choice(candidates)
+        target.hidden_role = "Doctor"
+        target.hidden_knowledge = [
+            f"You are the Doctor of the {target.faction}.",
+            "Ability: Protect one player per night from elimination (Round 3+).",
+        ] + [k for k in target.hidden_knowledge if "doctor" not in k.lower()]
+        target.behavioral_rules = [
+            r for r in target.behavioral_rules
+            if "villager" not in r.lower()
+        ] + ["Protect key allies at night. Don't reveal your role unless strategically necessary."]
+
+        logger.info("Guaranteed Doctor role assigned to %s", target.name)
         return characters
 
     def _fallback_characters(
@@ -182,5 +272,8 @@ class CharacterFactory:
             )
             char.sims_traits = fallback_traits[i]
             characters.append(char)
+
+        # Guarantee at least 1 Doctor/Protector in fallback
+        characters = self._ensure_doctor_role(characters, world)
 
         return characters

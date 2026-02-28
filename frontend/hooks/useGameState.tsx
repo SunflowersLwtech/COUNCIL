@@ -28,8 +28,10 @@ export interface GameChatMessage {
   characterName?: string;
   content: string;
   isThinking?: boolean;
+  isStreaming?: boolean;
   voiceId?: string;
   isComplication?: boolean;
+  emotion?: string;
 }
 
 interface GameStateCtx {
@@ -57,11 +59,15 @@ interface GameStateCtx {
     id: string; name: string; hidden_role: string; faction: string;
     is_eliminated: boolean; persona: string; public_role: string; avatar_seed: string;
   }>;
+  staggeredVotes: Array<{
+    voterName: string; targetName: string; timestamp: number;
+  }>;
   // Actions
   uploadDocument: (file: File) => Promise<void>;
   uploadText: (text: string) => Promise<void>;
   loadScenario: (id: string) => Promise<void>;
   startGame: () => Promise<void>;
+  showHowToPlay: () => void;
   sendMessage: (text: string, targetId?: string | null) => void;
   castVote: (charId: string) => void;
   setSelectedVote: (id: string | null) => void;
@@ -78,7 +84,7 @@ const GameStateContext = createContext<GameStateCtx | null>(null);
 
 interface GameStateProviderProps {
   children: ReactNode;
-  onCharacterResponse?: (content: string, characterName: string, voiceId?: string) => void;
+  onCharacterResponse?: (content: string, characterName: string, voiceId?: string, characterId?: string) => void;
 }
 
 export function GameStateProvider({ children, onCharacterResponse }: GameStateProviderProps) {
@@ -108,6 +114,10 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
   const [revealedCharacters, setRevealedCharacters] = useState<Array<{
     id: string; name: string; hidden_role: string; faction: string;
     is_eliminated: boolean; persona: string; public_role: string; avatar_seed: string;
+  }>>([]);
+  // Staggered vote reveal: accumulate individual votes for animated display
+  const [staggeredVotes, setStaggeredVotes] = useState<Array<{
+    voterName: string; targetName: string; timestamp: number;
   }>>([]);
 
   const streamRef = useRef<AbortController | null>(null);
@@ -219,8 +229,62 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         }
         break;
 
+      case "stream_start":
+        // Replace thinking placeholder with empty streaming message
+        setChatMessages((prev) => {
+          const filtered = prev.filter(
+            (m) => !(m.characterId === event.character_id && m.isThinking)
+          );
+          return [
+            ...filtered,
+            {
+              role: "character",
+              characterId: event.character_id,
+              characterName: event.character_name,
+              content: "",
+              isStreaming: true,
+            },
+          ];
+        });
+        break;
+
+      case "stream_delta":
+        // Append delta to the streaming message
+        setChatMessages((prev) => {
+          const idx = prev.findLastIndex(
+            (m) => m.characterId === event.character_id && m.isStreaming
+          );
+          if (idx === -1) return prev;
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], content: updated[idx].content + (event.delta || "") };
+          return updated;
+        });
+        break;
+
+      case "stream_end":
+        // Finalize streaming message with complete text, trigger TTS
+        setChatMessages((prev) => {
+          const idx = prev.findLastIndex(
+            (m) => m.characterId === event.character_id && m.isStreaming
+          );
+          if (idx === -1) return prev;
+          const updated = [...prev];
+          updated[idx] = {
+            ...updated[idx],
+            content: event.content || updated[idx].content,
+            isStreaming: false,
+            voiceId: event.voice_id,
+            emotion: event.emotion,
+          };
+          return updated;
+        });
+        if (event.content && event.character_name) {
+          onCharacterResponseRef.current?.(event.content, event.character_name, event.voice_id, event.character_id);
+        }
+        break;
+
       case "response":
-        // Remove thinking placeholder and add the real response
+        // Legacy non-streaming response (fallback)
         setChatMessages((prev) => {
           const filtered = prev.filter(
             (m) => !(m.characterId === event.character_id && m.isThinking)
@@ -233,12 +297,12 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
               characterName: event.character_name,
               content: event.content || "",
               voiceId: event.voice_id,
+              emotion: event.emotion,
             },
           ];
         });
-        // Trigger TTS for character response
         if (event.content && event.character_name) {
-          onCharacterResponseRef.current?.(event.content, event.character_name, event.voice_id);
+          onCharacterResponseRef.current?.(event.content, event.character_name, event.voice_id, event.character_id);
         }
         break;
 
@@ -252,10 +316,11 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
             characterName: event.character_name,
             content: event.content || "",
             voiceId: event.voice_id,
+            emotion: event.emotion,
           },
         ]);
         if (event.content && event.character_name) {
-          onCharacterResponseRef.current?.(event.content, event.character_name, event.voice_id);
+          onCharacterResponseRef.current?.(event.content, event.character_name, event.voice_id, event.character_id);
         }
         break;
 
@@ -269,6 +334,26 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         if (event.content) {
           onCharacterResponseRef.current?.(event.content, "Narrator");
         }
+        break;
+
+      case "discussion_warning":
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "system", content: event.content || "The council grows restless. A vote will be called shortly." },
+        ]);
+        break;
+
+      case "discussion_ending":
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "system", content: event.content || "The council has heard enough. The vote will now begin." },
+        ]);
+        // Auto-transition to voting phase so VotePanel appears
+        setPhase("voting");
+        setHasVoted(false);
+        setVoteResults(null);
+        setSelectedVote(null);
+        setStaggeredVotes([]);
         break;
 
       case "night_action":
@@ -299,6 +384,23 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
             setHasVoted(false);
             setVoteResults(null);
             setSelectedVote(null);
+            setStaggeredVotes([]);
+            setChatMessages((prev) => [
+              ...prev,
+              {
+                role: "system",
+                content: "Time to vote. Select the council member you believe is a traitor.",
+              },
+            ]);
+          }
+          if (event.phase === "discussion" && event.round && event.round > 1) {
+            setChatMessages((prev) => [
+              ...prev,
+              {
+                role: "system",
+                content: "A new day dawns. The council is back in session \u2014 discuss what happened and plan your next move.",
+              },
+            ]);
           }
         }
         break;
@@ -308,6 +410,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         setChatMessages((prev) => [
           ...prev,
           { role: "narrator", content: event.content || "Night falls... The hidden forces move in darkness." },
+          { role: "system", content: "Night falls. You have no night action \u2014 wait for dawn." },
         ]);
         if (event.content) {
           onCharacterResponseRef.current?.(event.content, "Narrator");
@@ -347,17 +450,28 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         setHasVoted(false);
         setVoteResults(null);
         setSelectedVote(null);
-        break;
-
-      case "vote":
-        // Individual vote announcement
+        setStaggeredVotes([]);
         setChatMessages((prev) => [
           ...prev,
           {
             role: "system",
-            content: `${event.voter_name} voted for ${event.target_name}`,
+            content: "Time to vote. Select the council member you believe is a traitor.",
           },
         ]);
+        break;
+
+      case "vote":
+        // Accumulate into staggered votes for animated reveal
+        if (event.voter_name && event.target_name) {
+          setStaggeredVotes((prev) => [
+            ...prev,
+            {
+              voterName: event.voter_name!,
+              targetName: event.target_name!,
+              timestamp: Date.now(),
+            },
+          ]);
+        }
         break;
 
       case "tally":
@@ -403,6 +517,13 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
             actionType: event.action_type,
             targets: event.eligible_targets,
           });
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              role: "system",
+              content: `Night falls. You may perform your action: ${event.action_type}. Select your target below.`,
+            },
+          ]);
         }
         break;
 
@@ -496,6 +617,8 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     }
   }, [handleSessionCreated]);
 
+  const HOWTOPLAY_STORAGE_KEY = "council_howtoplay_seen";
+
   const startGameFn = useCallback(async () => {
     if (!session) return;
     setError(null);
@@ -503,7 +626,12 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
       await api.startGame(session.session_id);
       setPhase("discussion");
       setRound(1);
-      setChatMessages([]);
+      setChatMessages([
+        {
+          role: "narrator",
+          content: "The council is now in session. Speak your mind \u2014 ask questions, make accusations, or defend yourself.",
+        },
+      ]);
       // Fetch player's hidden role
       try {
         const role = await api.getPlayerRole(session.session_id);
@@ -515,6 +643,17 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
       setError(err instanceof Error ? err.message : "Failed to start game");
     }
   }, [session]);
+
+  const showHowToPlay = useCallback(() => {
+    if (!session) return;
+    const seen = localStorage.getItem(HOWTOPLAY_STORAGE_KEY);
+    if (seen === "true") {
+      // Skip straight to starting the game
+      startGameFn();
+    } else {
+      setPhase("howtoplay");
+    }
+  }, [session, startGameFn]);
 
   const sendMessage = useCallback(
     (text: string, targetId?: string | null) => {
@@ -628,6 +767,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     setNightActionRequired(null);
     setInvestigationResult(null);
     setRevealedCharacters([]);
+    setStaggeredVotes([]);
   }, []);
 
   const loadScenarios = useCallback(async () => {
@@ -662,10 +802,12 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         nightActionRequired,
         investigationResult,
         revealedCharacters,
+        staggeredVotes,
         uploadDocument,
         uploadText,
         loadScenario: loadScenarioFn,
         startGame: startGameFn,
+        showHowToPlay,
         sendMessage,
         castVote,
         setSelectedVote,

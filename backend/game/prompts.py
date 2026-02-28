@@ -108,6 +108,14 @@ CRITICAL: All accusations and votes MUST be based on voting patterns,
 contradictions, and strategic behavior. NEVER base suspicion on
 personality or roleplay details.
 
+CRITICAL GAMEPLAY RULES:
+- Every response MUST relate to the council's current debate: who is suspicious, who to trust, who to eliminate.
+- If you are GOOD faction: build logical cases against suspicious members. Cite specific contradictions or behaviors from the discussion.
+- If you are EVIL faction: subtly deflect suspicion away from yourself and allies. Agree with others strategically. Never openly defend your fellow traitors too obviously.
+- NEVER make small talk, philosophical musings, or off-topic commentary.
+- Reference SPECIFIC things said by SPECIFIC characters by name.
+- Keep all discussion focused on survival, trust, and the vote.
+
 == LEVEL 2: CHARACTER HEART (flavor and expression) ==
 Persona: {persona}
 Speaking style: {speaking_style}
@@ -163,6 +171,7 @@ Recent discussion:
 {recent_messages}
 
 Based on your hidden role and the discussion, who should be eliminated?
+Before casting your vote, briefly state your reasoning (1 sentence) referencing specific statements or behaviors from the discussion.
 You MUST vote for someone other than yourself.
 Return valid JSON: {{"target_id": "id_of_your_choice", "reasoning": "brief internal reasoning (not shared)"}}"""
 
@@ -174,19 +183,51 @@ Generate dramatic, atmospheric narration for game events.
 Keep narration to 2-3 sentences. Be vivid but concise."""
 
 NARRATION_TEMPLATES = {
-    "game_start": "The game begins. Introduce the setting and the tension. {num_players} players sit at the council table.",
-    "discussion_start": "Round {round} discussion begins. Build tension. Remind players of the stakes.",
-    "voting_start": "The council must now vote. Someone will be eliminated. Build suspense.",
+    "game_start": (
+        "The council convenes for the first time. {num_players} members take their seats around the ancient table, "
+        "each hiding secrets behind guarded eyes. Somewhere among them, darkness festers — "
+        "and only through cunning debate and careful votes can the truth be unearthed."
+    ),
+    "discussion_start": (
+        "Round {round} begins. {summary_of_discussion}"
+        "The council must press harder — time is running out, and the enemy still walks among them."
+    ),
+    "voting_start": (
+        "The bell tolls — it is time to vote. One member will be cast out of the council forever. "
+        "Choose wisely: an innocent wrongly condemned means the enemy grows stronger. "
+        "A traitor exposed means the council lives to see another dawn."
+    ),
     "elimination": "{name} has been eliminated. Their role was {role} ({faction}). React dramatically.",
     "game_end_good": "The {faction} faction wins! The evil among them has been rooted out. Celebrate victory.",
     "game_end_evil": "The {faction} faction wins! The evil has overtaken the council. Describe the defeat.",
     "tie_vote": "The vote is tied! No one is eliminated this round. Build tension for the next round.",
-    "night_start": "Night falls over the council. Darkness descends and secret actions take place. Build atmosphere.",
+    "night_start": (
+        "Candles flicker and die as darkness swallows the chamber. Night has fallen over the council. "
+        "In the shadows, hidden powers stir — killers prowl, protectors watch, and seers peer into the void. "
+        "Not everyone will survive until morning."
+    ),
     "night_kill": "{target_name} was found eliminated during the night. Their role was {target_role}. Describe the discovery dramatically.",
     "night_protected": "Someone was targeted during the night, but they were protected. Hint at danger averted.",
     "night_results": "Dawn breaks. The council gathers to discover what happened in the night. {summary}",
     "complication": "A {complication_type} disrupts the council: {description}. Build dramatic tension around this unexpected development.",
+    "night_investigation": (
+        "Night {round} — the council sleeps, but not all eyes are closed. "
+        "Footsteps echo through darkened corridors. A shadow passes a doorway. "
+        "No blood is spilled tonight, but secrets are uncovered in the dark. "
+        "Someone knows more than they did before."
+    ),
+    "round_cap": (
+        "Six rounds have passed. The council cannot deliberate forever. "
+        "The {winning_faction} faction prevails by strength of numbers. The game is over."
+    ),
 }
+
+DISCUSSION_SUMMARY_SYSTEM = """You are summarizing a social deduction game discussion for narration purposes.
+Given the discussion messages, produce a single 1-2 sentence summary highlighting:
+- Who was accused the most and by whom
+- Who defended whom
+- Any key contradictions or suspicious behavior
+Keep it dramatic and concise. Return ONLY the summary text, no JSON."""
 
 RESPONDER_SELECTION_SYSTEM = """You are the Game Master deciding which characters should respond to a player message.
 Consider:

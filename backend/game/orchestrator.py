@@ -32,11 +32,13 @@ class GameOrchestrator:
         self.doc_engine = DocumentEngine()
         self.char_factory = CharacterFactory()
         self.skill_loader = SkillLoader()
-        self.game_master = GameMaster()
+        self.game_master = GameMaster(skill_loader=self.skill_loader)
         self.persistence = persistence
         # In-memory session storage
         self._sessions: dict[str, GameState] = {}
         self._agents: dict[str, dict[str, CharacterAgent]] = {}  # session_id -> {char_id -> agent}
+        # Background tasks for fire-and-forget emotion updates
+        self._bg_tasks: set[asyncio.Task] = set()
 
     async def _get_session(self, session_id: str) -> GameState:
         # 1. Check in-memory cache
@@ -87,9 +89,20 @@ class GameOrchestrator:
     ):
         """Rebuild CharacterAgent instances from GameState and restore their memory."""
         skills = self._resolve_session_skills(state)
+        evil_factions = {
+            f.get("name", "")
+            for f in state.world.factions
+            if f.get("alignment", "").lower() == "evil"
+        }
         agents: dict[str, CharacterAgent] = {}
         for char in state.characters:
-            agent = CharacterAgent(char, state.world, active_skills=skills, canon_facts=state.canon_facts)
+            agent = CharacterAgent(
+                char, state.world,
+                active_skills=skills,
+                skill_loader=self.skill_loader,
+                evil_factions=evil_factions,
+                canon_facts=state.canon_facts,
+            )
             mem = agent_memory.get(char.id, {})
             agent._conversation_history = mem.get("conversation_history", [])
             agent._round_memory = mem.get("round_memory", [])
@@ -174,7 +187,7 @@ class GameOrchestrator:
     # ── Session creation ──────────────────────────────────────────────
 
     async def create_session_from_file(
-        self, file_bytes: bytes, filename: str, num_characters: int = 5,
+        self, file_bytes: bytes, filename: str, num_characters: int = 7,
         enabled_skills: list[str] | None = None,
     ) -> GameCreateResponse:
         """Create a game from an uploaded document."""
@@ -182,7 +195,7 @@ class GameOrchestrator:
         return await self._finalize_session(world, num_characters, enabled_skills)
 
     async def create_session_from_text(
-        self, text: str, num_characters: int = 5,
+        self, text: str, num_characters: int = 7,
         enabled_skills: list[str] | None = None,
     ) -> GameCreateResponse:
         """Create a game from raw text."""
@@ -190,7 +203,7 @@ class GameOrchestrator:
         return await self._finalize_session(world, num_characters, enabled_skills)
 
     async def create_session_from_scenario(
-        self, scenario_id: str, num_characters: int = 5,
+        self, scenario_id: str, num_characters: int = 7,
         enabled_skills: list[str] | None = None,
     ) -> GameCreateResponse:
         """Create a game from a pre-built scenario."""
@@ -236,17 +249,25 @@ class GameOrchestrator:
         # Update game master with active skills
         self.game_master.set_skills(active_skills)
 
-        # Create character agents with active skills
+        # Compute evil factions once for all agents
+        evil_factions = {
+            f.get("name", "")
+            for f in world.factions
+            if f.get("alignment", "").lower() == "evil"
+        }
+
+        # Create character agents with active skills and faction-aware injection
         agents = {}
         for char in characters:
-            agent = CharacterAgent(char, world, active_skills=active_skills, canon_facts=state.canon_facts)
+            agent = CharacterAgent(
+                char, world,
+                active_skills=active_skills,
+                skill_loader=self.skill_loader,
+                evil_factions=evil_factions,
+                canon_facts=state.canon_facts,
+            )
             # If player is evil, inform evil AI allies about the player
             if player_role and player_role.faction == char.faction:
-                evil_factions = {
-                    f.get("name", "")
-                    for f in world.factions
-                    if f.get("alignment", "").lower() == "evil"
-                }
                 if char.faction in evil_factions:
                     ally_note = (
                         f"The player (You) is secretly your ally — "
@@ -255,7 +276,13 @@ class GameOrchestrator:
                     )
                     char.hidden_knowledge.append(ally_note)
                     # Rebuild agent prompt to include the new knowledge
-                    agent = CharacterAgent(char, world, active_skills=active_skills, canon_facts=state.canon_facts)
+                    agent = CharacterAgent(
+                        char, world,
+                        active_skills=active_skills,
+                        skill_loader=self.skill_loader,
+                        evil_factions=evil_factions,
+                        canon_facts=state.canon_facts,
+                    )
             agents[char.id] = agent
         self._agents[state.session_id] = agents
 
@@ -403,11 +430,14 @@ class GameOrchestrator:
 
         yield f"data: {json.dumps({'type': 'responders', 'character_ids': responder_ids})}\n\n"
 
-        # Update emotions on all alive characters based on player message
+        # Update emotions on all alive characters based on player message (LLM-enhanced)
+        emotion_tasks = []
         for char in game_state.get_alive_characters(state):
             agent = agents.get(char.id)
             if agent:
-                agent.update_emotions(message, "player")
+                emotion_tasks.append(agent.update_emotions_llm(message, "player"))
+        if emotion_tasks:
+            await asyncio.gather(*emotion_tasks, return_exceptions=True)
 
         for i, char_id in enumerate(responder_ids):
             agent = agents.get(char_id)
@@ -423,7 +453,20 @@ class GameOrchestrator:
 
             try:
                 talk_modifier = self.game_master._get_talk_modifier(state, char_id)
-                response = await agent.respond(message, state.messages, talk_modifier=talk_modifier)
+
+                # Stream response token-by-token via SSE
+                yield f"data: {json.dumps({'type': 'stream_start', 'character_id': char_id, 'character_name': char.name})}\n\n"
+
+                full_response = ""
+                try:
+                    async for chunk in agent.respond_stream(message, state.messages, talk_modifier=talk_modifier):
+                        full_response += chunk
+                        yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': char_id, 'delta': chunk})}\n\n"
+                except Exception:
+                    if not full_response:
+                        full_response = agent._get_fallback_response()
+
+                response = getattr(agent, '_last_response', None) or full_response
 
                 ai_msg = ChatMessage(
                     speaker_id=char_id,
@@ -435,15 +478,23 @@ class GameOrchestrator:
                 )
                 state.messages.append(ai_msg)
 
-                # Update emotions on all characters based on AI response
+                # Fire-and-forget emotion updates: stagger delay absorbs execution time
+                ai_emotion_tasks = []
                 for other_char in game_state.get_alive_characters(state):
                     other_agent = agents.get(other_char.id)
                     if other_agent and other_char.id != char_id:
-                        other_agent.update_emotions(response, char_id)
+                        ai_emotion_tasks.append(other_agent.update_emotions_llm(response, char_id))
+                if ai_emotion_tasks:
+                    task = asyncio.ensure_future(
+                        asyncio.gather(*ai_emotion_tasks, return_exceptions=True)
+                    )
+                    self._bg_tasks.add(task)
+                    task.add_done_callback(self._bg_tasks.discard)
 
-                # Include emotion-tagged text for TTS
+                # Emit stream_end with complete data for TTS
                 tts_text = inject_emotion_tags(response, char.emotional_state)
-                yield f"data: {json.dumps({'type': 'response', 'character_id': char_id, 'character_name': char.name, 'content': response, 'tts_text': tts_text, 'voice_id': char.voice_id})}\n\n"
+                dominant_emotion = agent.get_dominant_emotion()
+                yield f"data: {json.dumps({'type': 'stream_end', 'character_id': char_id, 'character_name': char.name, 'content': response, 'tts_text': tts_text, 'voice_id': char.voice_id, 'emotion': dominant_emotion})}\n\n"
             except Exception as e:
                 yield f"data: {json.dumps({'type': 'error', 'character_id': char_id, 'error': str(e)})}\n\n"
 
@@ -477,12 +528,20 @@ class GameOrchestrator:
                         )
                         state.messages.append(react_msg)
                         tts_reaction = inject_emotion_tags(reaction, reactor.emotional_state)
-                        yield f"data: {json.dumps({'type': 'reaction', 'character_id': reactor.id, 'character_name': reactor.name, 'content': reaction, 'tts_text': tts_reaction, 'voice_id': reactor.voice_id})}\n\n"
+                        reactor_emotion = reactor_agent.get_dominant_emotion()
+                        yield f"data: {json.dumps({'type': 'reaction', 'character_id': reactor.id, 'character_name': reactor.name, 'content': reaction, 'tts_text': tts_reaction, 'voice_id': reactor.voice_id, 'emotion': reactor_emotion})}\n\n"
                 except Exception:
                     pass
 
         # Update tension level
         state = self.game_master.update_tension(state)
+
+        # Check discussion turn limits
+        limit_status = self.game_master.check_discussion_limit(state)
+        if limit_status == "warning":
+            yield f"data: {json.dumps({'type': 'discussion_warning', 'content': 'The council grows restless. A vote will be called shortly.'})}\n\n"
+        elif limit_status == "end":
+            yield f"data: {json.dumps({'type': 'discussion_ending', 'content': 'The council has heard enough. The vote will now begin.'})}\n\n"
 
         # Complication injection: when discussion stalls, inject a dramatic event
         if self.game_master.should_inject_complication(state):
@@ -633,21 +692,26 @@ class GameOrchestrator:
     # ── Night phase ────────────────────────────────────────────────────
 
     def _get_player_night_action_type(self, state: GameState) -> str | None:
-        """Determine what night action the player can perform, or None."""
+        """Determine what night action the player can perform, or None.
+
+        Rounds 1-2: Only investigation is available. Kills and protections are blocked.
+        Round 3+: Full powers.
+        """
         if not state.player_role or state.player_role.is_eliminated:
             return None
         role = state.player_role.hidden_role.lower()
+        is_early_round = state.round < 3
         evil_factions = {
             f.get("name", "")
             for f in state.world.factions
             if f.get("alignment", "").lower() == "evil"
         }
         if state.player_role.faction in evil_factions:
-            return "kill"
+            return None if is_early_round else "kill"
         if "seer" in role or "investigat" in role:
-            return "investigate"
+            return "investigate"  # Seer can always investigate
         if "doctor" in role or "protect" in role:
-            return "protect"
+            return "protect" if is_early_round else "protect"  # Doctor can practice-protect
         return None  # Villager — no night action
 
     def _get_eligible_night_targets(self, state: GameState) -> list[dict]:

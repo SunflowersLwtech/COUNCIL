@@ -111,6 +111,23 @@ export default function PlayerRoleCard() {
               </div>
             )}
 
+            {/* Action guide */}
+            <div className="role-card-action-guide">
+              <p className="role-card-action-guide-text">
+                {isEvil
+                  ? "Pretend to be good. Deflect suspicion. Kill during the night. You win when traitors outnumber the good."
+                  : playerRole.hidden_role.toLowerCase().includes("seer") ||
+                    playerRole.hidden_role.toLowerCase().includes("investigat")
+                    ? "Each night, you can investigate one player to learn their true faction."
+                    : playerRole.hidden_role.toLowerCase().includes("doctor") ||
+                      playerRole.hidden_role.toLowerCase().includes("protect") ||
+                      playerRole.hidden_role.toLowerCase().includes("healer")
+                      ? "Each night, you can protect one player from being killed."
+                      : "Discuss, investigate, and vote out the traitors. You win when all traitors are eliminated."
+                }
+              </p>
+            </div>
+
             {/* Role power hint */}
             <div className="role-card-hint">
               {isEvil

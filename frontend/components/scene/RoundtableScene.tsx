@@ -5,6 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { RoundtableCanvas } from "./RoundtableCanvas";
 import type { CameraView, Agent3DConfig } from "@/lib/scene-constants";
+import type { GamePhase } from "@/lib/game-types";
 
 const BG_COLOR = new THREE.Color("#060612");
 
@@ -14,6 +15,8 @@ interface RoundtableSceneProps {
   cameraView: CameraView;
   autoFocusEnabled: boolean;
   agents: Agent3DConfig[];
+  gamePhase?: GamePhase;
+  round?: number;
 }
 
 class SceneErrorBoundary extends Component<
@@ -74,6 +77,7 @@ export default function RoundtableScene(props: RoundtableSceneProps) {
   return (
     <SceneErrorBoundary>
       <Canvas
+        style={{ background: "#060612" }}
         camera={{ position: [0, 1.6, -2.5], fov: 60 }}
         shadows
         gl={{
@@ -83,13 +87,20 @@ export default function RoundtableScene(props: RoundtableSceneProps) {
           toneMappingExposure: 1.1,
         }}
         onCreated={({ gl, scene }) => {
-          // Force dark background at every level
           gl.setClearColor("#060612", 1);
           scene.background = BG_COLOR;
           scene.fog = new THREE.Fog("#060612", 10, 30);
         }}
       >
-        <RoundtableCanvas {...props} />
+        <RoundtableCanvas
+          speakingAgentId={props.speakingAgentId}
+          thinkingAgentIds={props.thinkingAgentIds}
+          cameraView={props.cameraView}
+          autoFocusEnabled={props.autoFocusEnabled}
+          agents={props.agents}
+          gamePhase={props.gamePhase}
+          round={props.round}
+        />
       </Canvas>
     </SceneErrorBoundary>
   );

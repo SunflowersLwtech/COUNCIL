@@ -19,6 +19,11 @@ import time
 import traceback
 from pathlib import Path
 
+import pytest
+
+# Mark all async tests in this file as requiring live APIs
+pytestmark = [pytest.mark.asyncio, pytest.mark.live_api]
+
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))

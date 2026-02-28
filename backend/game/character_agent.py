@@ -14,7 +14,7 @@ from backend.game.prompts import (
 )
 
 if TYPE_CHECKING:
-    from backend.game.skill_loader import SkillConfig
+    from backend.game.skill_loader import SkillConfig, SkillLoader
 
 # ── Mistral function-calling tool definitions ────────────────────────
 
@@ -77,7 +77,7 @@ BREAKING_PATTERNS = [
 
 # Memory bounds
 MAX_CONVERSATION_HISTORY = 20
-MAX_ROUND_MEMORY = 5
+MAX_ROUND_MEMORY = 8
 MAX_RECENT_MEMORIES = 10
 
 
@@ -89,25 +89,22 @@ class CharacterAgent(MistralBaseAgent):
         character: Character,
         world_model: WorldModel,
         active_skills: list[SkillConfig] | None = None,
+        skill_loader: SkillLoader | None = None,
+        evil_factions: set[str] | None = None,
         canon_facts: list[str] | None = None,
     ):
         super().__init__()
         self.character = character
         self.world_model = world_model
         self.active_skills: list[SkillConfig] = active_skills or []
+        self._skill_loader = skill_loader
+        self._evil_factions: set[str] = evil_factions or set()
         self.canon_facts: list[str] = list(canon_facts) if canon_facts else []
         self.temperature = 0.7
         self.agent_role = character.name
 
-        # Pre-compute skill injection cache (static for the lifetime of the agent)
+        # Lazy injection cache — loaded on first access per target
         self._injection_cache: dict[str, str] = {}
-        if self.active_skills:
-            for target in ("character_agent", "vote_prompt", "night_action",
-                           "spontaneous_reaction", "round_summary"):
-                parts = [s.injections.get(target, "") for s in self.active_skills]
-                joined = "\n\n".join(p for p in parts if p)
-                if joined:
-                    self._injection_cache[target] = joined
 
         # Pre-compute merged behavioral rules
         self._all_behavioral_rules: list[str] = list(self.character.behavioral_rules)
@@ -118,6 +115,20 @@ class CharacterAgent(MistralBaseAgent):
         self.system_prompt = self._build_system_prompt()
         self._conversation_history: list[dict] = []
         self._round_memory: list[str] = []
+
+    def _get_injection(self, target: str) -> str:
+        """Lazy-load skill injection for a target, with faction filtering and caching."""
+        if target in self._injection_cache:
+            return self._injection_cache[target]
+        if self._skill_loader and self.active_skills:
+            injection = self._skill_loader.build_injection_for_agent(
+                target, self.active_skills,
+                self.character.faction, self._evil_factions,
+            )
+        else:
+            injection = ""
+        self._injection_cache[target] = injection
+        return injection
 
     def _build_system_prompt(self) -> str:
         """Build multi-layer prompt with YAML Jazz personality."""
@@ -130,7 +141,7 @@ class CharacterAgent(MistralBaseAgent):
 
         emotional_modifier = self.get_response_style()
 
-        skill_injections = self._injection_cache.get("character_agent", "")
+        skill_injections = self._get_injection("character_agent")
 
         return CHARACTER_SYSTEM_PROMPT.format(
             name=c.name,
@@ -231,8 +242,93 @@ class CharacterAgent(MistralBaseAgent):
 
     # ── Emotion system ───────────────────────────────────────────────
 
+    async def update_emotions_llm(self, message: str, speaker_id: str):
+        """Update emotional state using LLM analysis with keyword fallback."""
+        try:
+            analysis = await asyncio.wait_for(
+                self._analyze_emotion_llm(message, speaker_id),
+                timeout=5.0,
+            )
+            if analysis:
+                self._apply_llm_emotion_analysis(analysis, speaker_id)
+                return
+        except (asyncio.TimeoutError, Exception):
+            pass
+        # Fallback to keyword matching
+        self.update_emotions(message, speaker_id)
+
+    async def _analyze_emotion_llm(self, message: str, speaker_id: str) -> dict | None:
+        """Use mistral-small-latest to analyze emotional content of a message."""
+        prompt = (
+            f"Analyze this message from a social deduction game for its emotional impact on the character '{self.character.name}' "
+            f"(faction: {self.character.faction}).\n\n"
+            f"Message: \"{message}\"\n\n"
+            f"Return valid JSON with these float scores (0.0 to 1.0):\n"
+            f"- accusation_level: how much this message accuses or suspects {self.character.name}\n"
+            f"- support_level: how much this message supports or defends {self.character.name}\n"
+            f"- threat_to_faction: how threatening this message is to {self.character.name}'s faction goals\n"
+        )
+        messages = [
+            {"role": "system", "content": "You are an emotion analyzer. Return only valid JSON."},
+            {"role": "user", "content": prompt},
+        ]
+        response = await self._mistral.chat.complete_async(
+            model="mistral-small-latest",
+            messages=messages,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+        )
+        raw = response.choices[0].message.content
+        data = json.loads(raw)
+        return data
+
+    def _apply_llm_emotion_analysis(self, analysis: dict, speaker_id: str):
+        """Apply LLM emotion analysis results to emotional state."""
+        es = self.character.emotional_state
+        st = self.character.sims_traits
+        mm = self.character.mind_mirror
+
+        accusation = float(analysis.get("accusation_level", 0.0))
+        support = float(analysis.get("support_level", 0.0))
+        threat = float(analysis.get("threat_to_faction", 0.0))
+
+        confidence = mm.emotional.traits.get("confident", 4) / 7.0
+        niceness = st.nice / 10.0
+        forcefulness = mm.emotional.traits.get("forceful", 4) / 7.0
+
+        relationship = self._find_relationship(speaker_id)
+        trust_with_speaker = relationship.trust if relationship else 0.5
+
+        if accusation > 0.3:
+            fear_delta = accusation * 0.25 * (1.0 - confidence * 0.6)
+            anger_delta = accusation * 0.2 * (0.5 + forcefulness * 0.5)
+            es.fear = min(1.0, es.fear + fear_delta)
+            es.anger = min(1.0, es.anger + anger_delta)
+            es.trust = max(0.0, es.trust - accusation * 0.15 * (0.5 + trust_with_speaker))
+            es.happiness = max(0.0, es.happiness - accusation * 0.1)
+            if relationship:
+                relationship.trust = max(0.0, relationship.trust - accusation * 0.15)
+            self._add_memory("Accused by someone", {"fear": fear_delta, "anger": anger_delta},
+                           "That stung" if niceness > 0.5 else "They'll regret that")
+
+        if support > 0.3:
+            outgoingness = st.outgoing / 10.0
+            es.trust = min(1.0, es.trust + support * 0.15 * (0.5 + outgoingness * 0.5))
+            es.happiness = min(1.0, es.happiness + support * 0.1)
+            es.fear = max(0.0, es.fear - support * 0.08 * confidence)
+            if relationship:
+                relationship.trust = min(1.0, relationship.trust + support * 0.1)
+                relationship.closeness = min(1.0, relationship.closeness + support * 0.05)
+
+        if threat > 0.3:
+            es.curiosity = min(1.0, es.curiosity + threat * 0.1)
+            es.energy = min(1.0, es.energy + threat * 0.05)
+
+        self._update_mood_summary()
+        self._prompt_dirty = True
+
     def update_emotions(self, message: str, speaker_id: str):
-        """Update emotional state modulated by personality traits."""
+        """Update emotional state using keyword matching (synchronous fallback)."""
         es = self.character.emotional_state
         st = self.character.sims_traits
         mm = self.character.mind_mirror
@@ -307,17 +403,19 @@ class CharacterAgent(MistralBaseAgent):
         self._prompt_dirty = True
 
     def decay_emotions(self):
-        """Decay emotions toward baseline between rounds."""
+        """Decay emotions toward baseline between rounds. Anger decays slower (grudges persist)."""
         es = self.character.emotional_state
         baseline = {"happiness": 0.5, "anger": 0.0, "fear": 0.1, "trust": 0.5, "energy": 0.8, "curiosity": 0.5}
-        decay_rate = 0.1
+        decay_rate = 0.05
 
         for attr, base in baseline.items():
             current = getattr(es, attr)
+            # Anger decays at half rate (grudges persist longer)
+            effective_rate = decay_rate * 0.5 if attr == "anger" else decay_rate
             if current > base:
-                setattr(es, attr, max(base, current - decay_rate))
+                setattr(es, attr, max(base, current - effective_rate))
             elif current < base:
-                setattr(es, attr, min(base, current + decay_rate))
+                setattr(es, attr, min(base, current + effective_rate))
 
         self._prompt_dirty = True
 
@@ -345,6 +443,22 @@ class CharacterAgent(MistralBaseAgent):
         if es.trust < 0.2: moods.append("suspicious of everyone")
         if es.curiosity > 0.7: moods.append("intensely focused")
         self.character.current_mood = ", ".join(moods) if moods else "calm and watchful"
+
+    def get_dominant_emotion(self) -> str:
+        """Return the dominant emotion label for SSE events."""
+        es = self.character.emotional_state
+        emotions = {
+            "angry": es.anger,
+            "fearful": es.fear,
+            "happy": es.happiness,
+            "suspicious": 1.0 - es.trust,
+            "curious": es.curiosity,
+        }
+        dominant = max(emotions, key=emotions.get)
+        # Only report if it's meaningfully elevated
+        if emotions[dominant] < 0.4:
+            return "neutral"
+        return dominant
 
     def get_response_style(self) -> str:
         """Return a modifier string based on dominant emotion."""
@@ -419,12 +533,82 @@ class CharacterAgent(MistralBaseAgent):
 
     # ── Response generation ──────────────────────────────────────────
 
+    async def respond_stream(self, message: str, context_messages: list[ChatMessage], talk_modifier: str = ""):
+        """Stream an in-character response token-by-token. Yields text chunks.
+        After iteration, self._last_response holds the final humanized text."""
+        self._ensure_prompt_fresh()
+        modifier_prefix = f"[Pacing note: {talk_modifier}]\n" if talk_modifier else ""
+        context = ""
+        recent = context_messages[-20:] if len(context_messages) > 20 else context_messages
+        for msg in recent:
+            prefix = f"[{msg.speaker_name}]" if msg.speaker_name else "[Unknown]"
+            context += f"{prefix}: {msg.content}\n"
+
+        memory_context = ""
+        if self._round_memory:
+            memory_context = "Your memory from previous rounds:\n" + "\n".join(
+                f"- Round {i+1}: {mem}" for i, mem in enumerate(self._round_memory[-MAX_ROUND_MEMORY:])
+            ) + "\n\n"
+
+        own_messages = [m.content for m in context_messages if m.speaker_id == self.character.id][-3:]
+        anti_repeat = ""
+        if own_messages:
+            anti_repeat = "Your previous messages (DO NOT repeat these):\n" + "\n".join(f"- {m}" for m in own_messages) + "\n\n"
+
+        messages = [{"role": "system", "content": self.system_prompt}]
+
+        if len(self._conversation_history) > 0 and len(self._conversation_history) % 10 == 0:
+            messages.append({
+                "role": "system",
+                "content": f"REMINDER: You are {self.character.name}. Speak with {self.character.speaking_style}. Never break character.",
+            })
+
+        for turn in self._conversation_history[-6:]:
+            messages.append(turn)
+
+        messages.append({
+            "role": "user",
+            "content": (
+                f"{modifier_prefix}{memory_context}"
+                f"{anti_repeat}"
+                f"Recent discussion:\n{context}\n\n"
+                f"New message directed at the council: {message}\n\n"
+                f"Respond in character as {self.character.name}. "
+                "Keep it to 2-4 sentences."
+            ),
+        })
+
+        full_response = ""
+        try:
+            async with asyncio.timeout(15.0):
+                async for chunk in self.call_mistral_stream(messages):
+                    full_response += chunk
+                    yield chunk
+        except TimeoutError:
+            if not full_response:
+                full_response = self._get_fallback_response()
+                yield full_response
+        except Exception:
+            if not full_response:
+                full_response = self._get_fallback_response()
+                yield full_response
+
+        final = self._humanize(full_response) if full_response else self._get_fallback_response()
+        self._last_response = final
+
+        self._conversation_history.append({"role": "user", "content": message})
+        self._conversation_history.append({"role": "assistant", "content": final})
+        if len(self._conversation_history) > MAX_CONVERSATION_HISTORY:
+            self._conversation_history = self._conversation_history[-MAX_CONVERSATION_HISTORY:]
+        if len(self._round_memory) > MAX_ROUND_MEMORY:
+            self._round_memory = self._round_memory[-MAX_ROUND_MEMORY:]
+
     async def respond(self, message: str, context_messages: list[ChatMessage], talk_modifier: str = "") -> str:
         """Generate an in-character response with safety guards."""
         self._ensure_prompt_fresh()
         modifier_prefix = f"[Pacing note: {talk_modifier}]\n" if talk_modifier else ""
         context = ""
-        recent = context_messages[-10:] if len(context_messages) > 10 else context_messages
+        recent = context_messages[-20:] if len(context_messages) > 20 else context_messages
         for msg in recent:
             prefix = f"[{msg.speaker_name}]" if msg.speaker_name else "[Unknown]"
             context += f"{prefix}: {msg.content}\n"
@@ -497,7 +681,7 @@ class CharacterAgent(MistralBaseAgent):
 
         recent_msgs = "\n".join(
             f"[{turn['role']}]: {turn['content'][:200]}"
-            for turn in self._conversation_history[-8:]
+            for turn in self._conversation_history[-15:]
         )
 
         prompt = VOTE_PROMPT.format(
@@ -509,7 +693,7 @@ class CharacterAgent(MistralBaseAgent):
             recent_messages=recent_msgs or "(no recent discussion)",
         )
 
-        vote_injection = self._injection_cache.get("vote_prompt", "")
+        vote_injection = self._get_injection("vote_prompt")
         if vote_injection:
             prompt += "\n\n" + vote_injection
 
@@ -568,7 +752,7 @@ class CharacterAgent(MistralBaseAgent):
             role_actions=role_actions,
         )
 
-        night_injection = self._injection_cache.get("night_action", "")
+        night_injection = self._get_injection("night_action")
         if night_injection:
             prompt += "\n\n" + night_injection
 
@@ -621,7 +805,7 @@ class CharacterAgent(MistralBaseAgent):
 
         prompt = ROUND_SUMMARY_PROMPT.format(messages=msgs_text)
 
-        summary_injection = self._injection_cache.get("round_summary", "")
+        summary_injection = self._get_injection("round_summary")
         if summary_injection:
             prompt += "\n\n" + summary_injection
 
@@ -644,7 +828,7 @@ class CharacterAgent(MistralBaseAgent):
         self._ensure_prompt_fresh()
         c = self.character
 
-        recent = context_messages[-5:] if len(context_messages) > 5 else context_messages
+        recent = context_messages[-10:] if len(context_messages) > 10 else context_messages
         recent_context = "\n".join(
             f"[{m.speaker_name}]: {m.content}" for m in recent
         )
@@ -654,7 +838,7 @@ class CharacterAgent(MistralBaseAgent):
             recent_context=recent_context,
         )
 
-        react_injection = self._injection_cache.get("spontaneous_reaction", "")
+        react_injection = self._get_injection("spontaneous_reaction")
         if react_injection:
             prompt += "\n\n" + react_injection
 

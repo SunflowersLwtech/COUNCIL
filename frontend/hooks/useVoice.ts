@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { generateTTS } from "@/lib/api";
 import { agentRoleToId } from "@/lib/agent-utils";
+import { playManagedAudio, stopManagedAudio } from "@/lib/audio-manager";
 
 export type VoiceStatus =
   | "idle"
@@ -42,6 +43,7 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsQueueRef = useRef<TtsQueueItem[]>([]);
   const ttsProcessingRef = useRef(false);
+  const queueAbortRef = useRef<AbortController | null>(null);
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const usingWebSpeechRef = useRef(false);
 
@@ -169,23 +171,30 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
 
       scribe.on(RealtimeEvents.ERROR, (ev: any) => {
         console.error("Scribe error:", ev);
-        // Fall back to Web Speech
+        // Close Scribe to release microphone before falling back
         scribeRef.current = null;
+        try { scribe.close(); } catch {}
         console.log("Falling back to Web Speech API...");
-        if (!startWebSpeech()) {
-          showError("Voice connection error");
-          setStatus("idle");
-        }
+        // Delay to allow microphone release
+        setTimeout(() => {
+          if (!startWebSpeech()) {
+            showError("Voice connection error");
+            setStatus("idle");
+          }
+        }, 500);
       });
 
       scribe.on(RealtimeEvents.AUTH_ERROR, (ev: any) => {
         console.error("Scribe auth error:", ev);
         scribeRef.current = null;
+        try { scribe.close(); } catch {}
         console.log("Falling back to Web Speech API...");
-        if (!startWebSpeech()) {
-          showError("Voice authentication failed");
-          setStatus("idle");
-        }
+        setTimeout(() => {
+          if (!startWebSpeech()) {
+            showError("Voice authentication failed");
+            setStatus("idle");
+          }
+        }, 500);
       });
 
       scribe.on(RealtimeEvents.PARTIAL_TRANSCRIPT, (ev: any) => {
@@ -200,8 +209,11 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
       });
 
       scribe.on(RealtimeEvents.CLOSE, () => {
-        setStatus("idle");
-        setPartialTranscript("");
+        // Don't reset status if we've already fallen back to Web Speech
+        if (!usingWebSpeechRef.current) {
+          setStatus("idle");
+          setPartialTranscript("");
+        }
         scribeRef.current = null;
       });
     } catch (err) {
@@ -301,40 +313,101 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
     ttsProcessingRef.current = true;
     setStatus("speaking");
 
-    while (ttsQueueRef.current.length > 0) {
-      const item = ttsQueueRef.current.shift()!;
-      const agentId = agentRoleToId(item.agentRole);
+    const abortController = new AbortController();
+    queueAbortRef.current = abortController;
 
-      try {
-        const blob = await generateTTS(item.text, agentId);
-        if (!blob) continue;
+    let prefetchedBlob: Blob | null = null;
+    let prefetchedItem: TtsQueueItem | null = null;
 
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audioRef.current = audio;
+    while (ttsQueueRef.current.length > 0 || prefetchedBlob) {
+      if (abortController.signal.aborted) break;
 
-        await new Promise<void>((resolve) => {
-          audio.onended = () => {
-            URL.revokeObjectURL(url);
-            audioRef.current = null;
-            setSpeakingAgentId(null);
-            resolve();
-          };
-          audio.onerror = () => {
-            URL.revokeObjectURL(url);
-            audioRef.current = null;
-            setSpeakingAgentId(null);
-            resolve();
-          };
-          setSpeakingAgentId(agentRoleToId(item.agentRole));
-          audio.play().catch(() => resolve());
+      let blob: Blob | null;
+      let item: TtsQueueItem;
+
+      if (prefetchedBlob && prefetchedItem) {
+        blob = prefetchedBlob;
+        item = prefetchedItem;
+        prefetchedBlob = null;
+        prefetchedItem = null;
+      } else {
+        item = ttsQueueRef.current.shift()!;
+        const agentId = agentRoleToId(item.agentRole);
+        try {
+          blob = await generateTTS(item.text, agentId);
+        } catch {
+          blob = null;
+        }
+      }
+
+      if (!blob) continue;
+      if (abortController.signal.aborted) break;
+
+      // Pre-fetch next item while current audio plays (Bug 3: save reference)
+      let prefetchPromise: Promise<Blob | null> | null = null;
+      let prefetchRef: TtsQueueItem | null = null;
+      if (ttsQueueRef.current.length > 0) {
+        prefetchRef = ttsQueueRef.current[0];
+        const nextAgentId = agentRoleToId(prefetchRef.agentRole);
+        prefetchPromise = generateTTS(prefetchRef.text, nextAgentId).catch(() => null);
+      }
+
+      // Play audio via global audio manager (Bug 4)
+      const audio = playManagedAudio(blob, () => {
+        audioRef.current = null;
+        setSpeakingAgentId(null);
+      });
+      audioRef.current = audio;
+
+      // Wait for playback to finish, with abort support (Bug 2)
+      await new Promise<void>((resolve) => {
+        const onAbort = () => resolve();
+        abortController.signal.addEventListener('abort', onAbort, { once: true });
+
+        const originalOnended = audio.onended;
+        audio.onended = (ev) => {
+          abortController.signal.removeEventListener('abort', onAbort);
+          if (typeof originalOnended === 'function') originalOnended.call(audio, ev);
+          resolve();
+        };
+        const originalOnerror = audio.onerror;
+        audio.onerror = (ev) => {
+          abortController.signal.removeEventListener('abort', onAbort);
+          if (typeof originalOnerror === 'function') (originalOnerror as any).call(audio, ev);
+          resolve();
+        };
+
+        setSpeakingAgentId(agentRoleToId(item.agentRole));
+        audio.play().catch(() => {
+          abortController.signal.removeEventListener('abort', onAbort);
+          resolve();
         });
-      } catch {
-        // skip this item, continue with next
+      });
+
+      if (abortController.signal.aborted) break;
+
+      // Collect pre-fetched result (Bug 3: match by reference, not blind shift)
+      if (prefetchPromise && prefetchRef) {
+        try {
+          prefetchedBlob = await prefetchPromise;
+          if (prefetchedBlob) {
+            const idx = ttsQueueRef.current.indexOf(prefetchRef);
+            if (idx >= 0) {
+              prefetchedItem = ttsQueueRef.current.splice(idx, 1)[0];
+            } else {
+              // Item was consumed elsewhere, discard prefetched blob
+              prefetchedBlob = null;
+            }
+          }
+        } catch {
+          prefetchedBlob = null;
+          prefetchedItem = null;
+        }
       }
     }
 
     ttsProcessingRef.current = false;
+    queueAbortRef.current = null;
     setStatus("idle");
   }, []);
 
@@ -356,14 +429,11 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
 
   const stopSpeaking = useCallback(() => {
     ttsQueueRef.current = [];
-    ttsProcessingRef.current = false;
+    queueAbortRef.current?.abort();
+    queueAbortRef.current = null;
 
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-      audioRef.current = null;
-    }
+    stopManagedAudio();
+    audioRef.current = null;
     setSpeakingAgentId(null);
     setStatus("idle");
   }, []);

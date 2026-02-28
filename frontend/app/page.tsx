@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { Globe, Trophy, RotateCcw, Shield, Skull, Heart } from "lucide-react";
 import DocumentUpload from "@/components/DocumentUpload";
 import GameLobby from "@/components/GameLobby";
+import HowToPlay from "@/components/HowToPlay";
 import GameBoard from "@/components/GameBoard";
 import CharacterCard, { seedToColor } from "@/components/CharacterCard";
 import { GameStateProvider, useGameState } from "@/hooks/useGameState";
@@ -140,6 +141,13 @@ function GameRouter() {
       return <DocumentUpload />;
     case "lobby":
       return <GameLobby />;
+    case "howtoplay":
+      return (
+        <HowToPlay
+          onStart={game.startGame}
+          worldTitle={game.session?.world_title}
+        />
+      );
     case "discussion":
     case "voting":
     case "reveal":
@@ -160,9 +168,9 @@ function HomeInner() {
   });
 
   const handleCharacterResponse = useCallback(
-    (content: string, characterName: string, voiceId?: string) => {
-      // Use voice_id directly as the agent identifier for game characters
-      const agentId = voiceId || characterName;
+    (content: string, characterName: string, voiceId?: string, characterId?: string) => {
+      // Use character_id (UUID) so backend can look up the correct voice
+      const agentId = characterId || voiceId || characterName;
       gameVoice.queueSingleResponse(content, agentId);
     },
     [gameVoice.queueSingleResponse]

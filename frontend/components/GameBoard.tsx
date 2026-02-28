@@ -13,6 +13,10 @@ import {
   Star,
   X,
   AlertTriangle,
+  ChevronUp,
+  ChevronDown,
+  MessageCircle,
+  Minus,
 } from "lucide-react";
 import { useGameState, type GameChatMessage } from "@/hooks/useGameState";
 import { useRoundtable } from "@/hooks/useRoundtable";
@@ -25,11 +29,17 @@ import CharacterReveal from "@/components/CharacterReveal";
 import PlayerRoleCard from "@/components/PlayerRoleCard";
 import NightActionPanel from "@/components/NightActionPanel";
 import GhostOverlay, { GhostRoleBadge } from "@/components/GhostOverlay";
+import PhaseTransition from "@/components/PhaseTransition";
 import { seedToColor } from "@/components/CharacterCard";
 
 const RoundtableScene = dynamic(
   () => import("@/components/scene/RoundtableScene"),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{ width: "100%", height: "100%", background: "#060612" }} />
+    ),
+  }
 );
 
 /* ── Tension Bar ─────────────────────────────────────────── */
@@ -68,12 +78,93 @@ function TensionBar({ tension }: { tension: number }) {
   );
 }
 
+/* ── Emotion Emoji Map ──────────────────────────────────── */
+
+const EMOTION_EMOJI: Record<string, string> = {
+  angry: "\uD83D\uDE20",
+  fearful: "\uD83D\uDE1F",
+  happy: "\uD83D\uDE0A",
+  suspicious: "\uD83E\uDD28",
+  curious: "\uD83E\uDD14",
+  neutral: "",
+};
+
+/* ── Status tag helpers ────────────────────────────────── */
+
+const ACCUSATION_PATTERNS = ["suspect", "suspicious", "accuse", "liar", "lying", "traitor", "blame", "guilty", "vote out", "eliminate"];
+
+function useCharacterStatuses(
+  messages: GameChatMessage[],
+  characters: { id: string; name: string }[]
+) {
+  return useMemo(() => {
+    const statuses: Record<string, { label: string; color: string }[]> = {};
+
+    // Count accusations per character from recent messages
+    const accusationCounts: Record<string, number> = {};
+    const recentMsgs = messages.slice(-30);
+
+    for (const msg of recentMsgs) {
+      if (msg.role !== "character" && msg.role !== "user") continue;
+      const lower = msg.content.toLowerCase();
+      const hasAccusation = ACCUSATION_PATTERNS.some((p) => lower.includes(p));
+      if (!hasAccusation) continue;
+
+      for (const char of characters) {
+        if (char.name && lower.includes(char.name.toLowerCase())) {
+          // Don't count self-accusations
+          if (msg.characterId !== char.id) {
+            accusationCounts[char.id] = (accusationCounts[char.id] || 0) + 1;
+          }
+        }
+      }
+    }
+
+    // Find the most accused character (threshold: at least 2 accusations)
+    let maxAccused = "";
+    let maxCount = 0;
+    for (const [id, count] of Object.entries(accusationCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        maxAccused = id;
+      }
+    }
+
+    if (maxAccused && maxCount >= 2) {
+      statuses[maxAccused] = [
+        ...(statuses[maxAccused] || []),
+        { label: "Under Suspicion", color: "#f97316" },
+      ];
+    }
+
+    return statuses;
+  }, [messages, characters]);
+}
+
 /* ── Character Roster (left side) ───────────────────────── */
 
 function CharacterRoster() {
   const game = useGameState();
   const roundtable = useRoundtable();
   const { t } = useI18n();
+
+  // Find the latest emotion for each character from chat messages
+  const characterEmotions = useMemo(() => {
+    const emotions: Record<string, string> = {};
+    // Scan from newest to oldest, keep first (latest) per character
+    for (let i = game.chatMessages.length - 1; i >= 0; i--) {
+      const msg = game.chatMessages[i];
+      if (msg.characterId && msg.emotion && !emotions[msg.characterId]) {
+        emotions[msg.characterId] = msg.emotion;
+      }
+    }
+    return emotions;
+  }, [game.chatMessages]);
+
+  const charStatuses = useCharacterStatuses(
+    game.chatMessages,
+    game.session?.characters || []
+  );
 
   if (!game.session) return null;
 
@@ -87,6 +178,9 @@ function CharacterRoster() {
         const initial = char.name.charAt(0).toUpperCase();
         const isTarget = game.chatTarget === char.id;
         const isSpeaking = roundtable.speakingAgentId === char.id;
+        const emotion = characterEmotions[char.id] || "neutral";
+        const emoji = EMOTION_EMOJI[emotion] || "";
+        const tags = charStatuses[char.id] || [];
 
         return (
           <button
@@ -101,13 +195,27 @@ function CharacterRoster() {
             }
             title={`${char.name} - ${char.public_role}${isTarget ? " (targeted)" : ""}`}
           >
-            <div
-              className="roster-avatar-circle"
-              style={{ backgroundColor: color }}
-            >
-              {initial}
+            <div className="roster-avatar-circle-wrap">
+              <div
+                className="roster-avatar-circle"
+                style={{ backgroundColor: color }}
+              >
+                {initial}
+              </div>
+              {emoji && (
+                <span className="roster-emotion-emoji">{emoji}</span>
+              )}
             </div>
             <span className="roster-avatar-name">{char.name.split(" ")[0]}</span>
+            {tags.map((tag, idx) => (
+              <span
+                key={idx}
+                className="roster-status-tag"
+                style={{ backgroundColor: tag.color }}
+              >
+                {tag.label}
+              </span>
+            ))}
             <GhostRoleBadge characterId={char.id} />
           </button>
         );
@@ -239,11 +347,45 @@ export default function GameBoard() {
   const [inputText, setInputText] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Chat drawer state: "minimized" | "expanded" | "hidden"
+  const [drawerState, setDrawerState] = useState<"minimized" | "expanded" | "hidden">("minimized");
+
+  // Track unread messages when drawer is hidden
+  const [unreadCount, setUnreadCount] = useState(0);
+  const prevMsgCountRef = useRef(game.chatMessages.length);
+
   const visibleMessages = game.chatMessages.slice(-60);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [visibleMessages.length]);
+    if (drawerState === "expanded") {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [visibleMessages.length, drawerState]);
+
+  // Track unread when drawer is hidden
+  useEffect(() => {
+    const newCount = game.chatMessages.length;
+    if (drawerState === "hidden" && newCount > prevMsgCountRef.current) {
+      setUnreadCount((prev) => prev + (newCount - prevMsgCountRef.current));
+    }
+    prevMsgCountRef.current = newCount;
+  }, [game.chatMessages.length, drawerState]);
+
+  // Clear unread when drawer opens
+  useEffect(() => {
+    if (drawerState !== "hidden") {
+      setUnreadCount(0);
+    }
+  }, [drawerState]);
+
+  // Auto-expand on new character response during discussion (if minimized)
+  useEffect(() => {
+    if (drawerState !== "minimized") return;
+    const latest = game.chatMessages[game.chatMessages.length - 1];
+    if (latest && (latest.role === "character" || latest.role === "narrator") && !latest.isThinking) {
+      setDrawerState("expanded");
+    }
+  }, [game.chatMessages.length]);
 
   const handleSend = () => {
     const text = inputText.trim();
@@ -283,7 +425,12 @@ export default function GameBoard() {
         cameraView={roundtable.cameraView}
         autoFocusEnabled={roundtable.autoFocusEnabled}
         agents={sceneAgents}
+        gamePhase={game.phase}
+        round={game.round}
       />
+
+      {/* Cinematic phase transition overlay */}
+      <PhaseTransition phase={game.phase} round={game.round} />
 
       {/* Overlay UI */}
       <div className="scene-overlay">
@@ -296,56 +443,13 @@ export default function GameBoard() {
         {/* ── Left: Character Roster ──────────────────────── */}
         <CharacterRoster />
 
-        {/* ── Right: Chat Panel ───────────────────────────── */}
-        <div className="chat-panel">
-          <div className="chat-panel-header">
-            <MessageSquare size={12} />
-            <span>
-              {isVoting
-                ? t("game.board.voting")
-                : isNight
-                  ? "Night"
-                  : t("game.board.discussion")}
-            </span>
-            {game.isChatStreaming && (
-              <Loader2
-                size={11}
-                className="animate-spin-custom"
-                style={{ color: "var(--accent)" }}
-              />
-            )}
-            <span className="chat-panel-count">
-              {game.chatMessages.length}
-            </span>
-          </div>
-
-          <div className="chat-panel-messages">
-            {visibleMessages.map((msg, i) => (
-              <ChatMessage key={i} message={msg} />
-            ))}
-            <div ref={chatEndRef} />
-          </div>
-        </div>
-
         {/* ── Player Role Card (floating, always visible during game) ── */}
         {game.playerRole && <PlayerRoleCard />}
 
         {/* ── Ghost Mode Overlay ──────────────────────────── */}
         {game.isGhostMode && <GhostOverlay />}
 
-        {/* ── Center: Vote Overlay ────────────────────────── */}
-        {isVoting && !game.isGhostMode && (
-          <div className="vote-overlay">
-            <VotePanel />
-          </div>
-        )}
-
-        {/* ── Night: Action Panel or Cinematic Overlay ───── */}
-        {isNight && hasNightAction && !game.isGhostMode && (
-          <div className="vote-overlay">
-            <NightActionPanel />
-          </div>
-        )}
+        {/* ── Night: Cinematic Overlay (no action needed) ── */}
         {isNight && !hasNightAction && <NightOverlay />}
 
         {/* ── Investigation Result Modal ──────────────────── */}
@@ -383,83 +487,164 @@ export default function GameBoard() {
           </div>
         )}
 
-        {/* ── Bottom: Input Bar ───────────────────────────── */}
-        {showInput && (
-          <div className="scene-input-bar">
-            {/* Player identity label */}
-            {game.playerRole && (
-              <div className="input-player-label">
-                <span className="input-player-you">YOU</span>
-                <span className="input-player-dot" style={{
-                  backgroundColor: game.playerRole.allies.length > 0 ? "#ef4444" : "#3b82f6"
-                }} />
-                <span className="input-player-role" style={{
-                  color: game.playerRole.allies.length > 0 ? "#ef4444" : "#3b82f6"
-                }}>
-                  {game.playerRole.hidden_role}
+        {/* ── Bottom Drawer: Vote / Night Action / Chat ── */}
+        {isVoting && !game.isGhostMode ? (
+          /* Vote drawer — replaces chat during voting */
+          <div className="action-drawer action-drawer-open">
+            <VotePanel />
+          </div>
+        ) : isNight && hasNightAction && !game.isGhostMode ? (
+          /* Night action drawer — replaces chat during night */
+          <div className="action-drawer action-drawer-open">
+            <NightActionPanel />
+          </div>
+        ) : drawerState === "hidden" ? (
+          /* Floating bubble when fully hidden */
+          <button
+            className="chat-bubble-btn"
+            onClick={() => setDrawerState("minimized")}
+          >
+            <MessageCircle size={20} />
+            {unreadCount > 0 && (
+              <span className="chat-bubble-badge">{unreadCount}</span>
+            )}
+          </button>
+        ) : (
+          <div className={`chat-drawer ${drawerState === "expanded" ? "chat-drawer-expanded" : ""}`}>
+            {/* Drawer header / handle */}
+            <div
+              className="chat-drawer-handle"
+              onClick={() =>
+                setDrawerState((s) => (s === "expanded" ? "minimized" : "expanded"))
+              }
+            >
+              <div className="chat-drawer-handle-bar" />
+              <div className="chat-drawer-handle-info">
+                <MessageSquare size={11} />
+                <span>
+                  {isVoting
+                    ? t("game.board.voting")
+                    : isNight
+                      ? "Night"
+                      : t("game.board.discussion")}
+                </span>
+                {game.isChatStreaming && (
+                  <Loader2
+                    size={11}
+                    className="animate-spin-custom"
+                    style={{ color: "var(--accent)" }}
+                  />
+                )}
+                <span className="chat-panel-count">
+                  {game.chatMessages.length}
                 </span>
               </div>
-            )}
-            {/* Target indicator */}
-            {targetChar && (
-              <div className="input-target-indicator animate-fade-in-up">
-                <span style={{ color: seedToColor(targetChar.avatar_seed || targetChar.id) }}>
-                  @{targetChar.name}
-                </span>
+              <div className="chat-drawer-handle-actions">
+                {drawerState === "expanded" ? (
+                  <ChevronDown size={14} />
+                ) : (
+                  <ChevronUp size={14} />
+                )}
                 <button
-                  className="input-target-clear"
-                  onClick={() => game.setChatTarget(null)}
+                  className="chat-drawer-hide-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDrawerState("hidden");
+                  }}
+                  title="Hide chat"
                 >
-                  <X size={10} />
+                  <Minus size={12} />
                 </button>
               </div>
-            )}
-            <div className="scene-input-row">
-              <input
-                type="text"
-                className="scene-input"
-                placeholder={
-                  voice.isListening
-                    ? "Listening..."
-                    : game.isChatStreaming
-                      ? t("game.board.thinking")
-                      : targetChar
-                        ? `Message ${targetChar.name}...`
-                        : t("game.board.inputPlaceholder")
-                }
-                value={displayInput}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                disabled={game.isChatStreaming || voice.isListening}
-              />
-              <button
-                onClick={() =>
-                  voice.isListening
-                    ? voice.stopListening()
-                    : voice.startListening()
-                }
-                className={`scene-mic-btn ${voice.isListening ? "scene-mic-btn-active" : ""}`}
-                title={
-                  voice.isListening ? "Stop listening" : "Start voice input"
-                }
-                disabled={game.isChatStreaming}
-              >
-                {voice.isListening ? <MicOff size={14} /> : <Mic size={14} />}
-              </button>
-              <button
-                onClick={handleSend}
-                className="scene-send-btn"
-                title={t("chat.send")}
-                disabled={game.isChatStreaming || !inputText.trim()}
-              >
-                <Send size={14} />
-              </button>
             </div>
+
+            {/* Messages area (visible when expanded) */}
+            {drawerState === "expanded" && (
+              <div className="chat-drawer-messages">
+                {visibleMessages.map((msg, i) => (
+                  <ChatMessage key={i} message={msg} />
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+            )}
+
+            {/* Input area (discussion phase only, not ghost) */}
+            {showInput && (
+              <div className="chat-drawer-input-area">
+                {/* Player identity label */}
+                {game.playerRole && (
+                  <div className="input-player-label">
+                    <span className="input-player-you">YOU</span>
+                    <span className="input-player-dot" style={{
+                      backgroundColor: game.playerRole.allies.length > 0 ? "#ef4444" : "#3b82f6"
+                    }} />
+                    <span className="input-player-role" style={{
+                      color: game.playerRole.allies.length > 0 ? "#ef4444" : "#3b82f6"
+                    }}>
+                      {game.playerRole.hidden_role}
+                    </span>
+                  </div>
+                )}
+                {/* Target indicator */}
+                {targetChar && (
+                  <div className="input-target-indicator animate-fade-in-up">
+                    <span style={{ color: seedToColor(targetChar.avatar_seed || targetChar.id) }}>
+                      @{targetChar.name}
+                    </span>
+                    <button
+                      className="input-target-clear"
+                      onClick={() => game.setChatTarget(null)}
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                )}
+                <div className="scene-input-row">
+                  <input
+                    type="text"
+                    className="scene-input"
+                    placeholder={
+                      voice.isListening
+                        ? "Listening..."
+                        : game.isChatStreaming
+                          ? t("game.board.thinking")
+                          : targetChar
+                            ? `Message ${targetChar.name}...`
+                            : "Address the council..."
+                    }
+                    value={displayInput}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    disabled={game.isChatStreaming || voice.isListening}
+                  />
+                  <button
+                    onClick={() =>
+                      voice.isListening
+                        ? voice.stopListening()
+                        : voice.startListening()
+                    }
+                    className={`scene-mic-btn ${voice.isListening ? "scene-mic-btn-active" : ""}`}
+                    title={voice.isListening ? "Stop listening" : "Start voice input"}
+                    disabled={game.isChatStreaming}
+                  >
+                    {voice.isListening ? <MicOff size={14} /> : <Mic size={14} />}
+                  </button>
+                  <button
+                    onClick={handleSend}
+                    className="scene-send-btn"
+                    title={t("chat.send")}
+                    disabled={game.isChatStreaming || !inputText.trim()}
+                  >
+                    <Send size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -506,6 +691,8 @@ function ChatMessage({ message }: { message: GameChatMessage }) {
     name = message.characterName;
   }
 
+  const emotionEmoji = message.emotion ? (EMOTION_EMOJI[message.emotion] || "") : "";
+
   const msgClass = [
     "chat-panel-msg",
     isUser && "chat-panel-msg-user",
@@ -536,6 +723,9 @@ function ChatMessage({ message }: { message: GameChatMessage }) {
         <span className="chat-msg-name" style={{ color: isComplication ? "#f59e0b" : color }}>
           {isComplication ? "Event" : name}
         </span>
+        {emotionEmoji && (
+          <span className="chat-msg-emotion">{emotionEmoji}</span>
+        )}
       </div>
       {message.isThinking ? (
         <div className="thinking-dots">

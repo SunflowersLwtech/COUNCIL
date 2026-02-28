@@ -21,6 +21,41 @@ interface ChatProps {
   initialMessages?: ChatMessage[];
 }
 
+const CyberDecodeText = ({ text }: { text: string }) => {
+  const [displayText, setDisplayText] = useState("");
+  const [isDecoding, setIsDecoding] = useState(true);
+
+  useEffect(() => {
+    let iter = 0;
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#%&*";
+    const interval = setInterval(() => {
+      setDisplayText(
+        text
+          .split("")
+          .map((char, index) => {
+            if (index < iter || char === " " || char === "\n") return char;
+            return chars[Math.floor(Math.random() * chars.length)];
+          })
+          .join("")
+      );
+      // Decrease divisor to slow down, increase to speed up 
+      iter += Math.max(1, text.length / 15);
+      if (iter >= text.length) {
+        setIsDecoding(false);
+        setDisplayText(text);
+        clearInterval(interval);
+      }
+    }, 40);
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return isDecoding ? (
+    <span className="font-mono text-sm opacity-80" style={{ color: "var(--accent)" }}>{displayText}</span>
+  ) : (
+    <ReactMarkdown>{text}</ReactMarkdown>
+  );
+};
+
 export default function Chat({
   isAnalysisComplete,
   isLoading,
@@ -35,7 +70,7 @@ export default function Chat({
   // Refs to break the circular dependency between handleSendWithText and voice
   const queueAgentResponsesRef = useRef<
     (items: Array<{ text: string; agentRole: string }>) => void
-  >(() => {});
+  >(() => { });
 
   // ── Core send logic (shared by keyboard + voice) ──────────────────
 
@@ -163,9 +198,8 @@ export default function Chat({
               <AgentAvatar role={msg.agentRole || "Orchestrator"} />
             )}
             <div
-              className={`max-w-[80%] p-3 text-sm ${
-                msg.role === "user" ? "chat-bubble-user ml-auto" : "chat-bubble-agent"
-              }`}
+              className={`max-w-[80%] p-3 text-sm ${msg.role === "user" ? "chat-bubble-user ml-auto" : "chat-bubble-agent"
+                }`}
             >
               {msg.role === "assistant" && msg.agentRole && (
                 <div
@@ -178,7 +212,7 @@ export default function Chat({
               )}
               {msg.role === "assistant" ? (
                 <div className="chat-markdown">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <CyberDecodeText text={msg.content} />
                 </div>
               ) : (
                 <span className="whitespace-pre-wrap">{msg.content}</span>

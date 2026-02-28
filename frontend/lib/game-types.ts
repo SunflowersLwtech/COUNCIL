@@ -1,4 +1,4 @@
-export type GamePhase = "upload" | "parsing" | "lobby" | "discussion" | "voting" | "reveal" | "night" | "ended";
+export type GamePhase = "upload" | "parsing" | "lobby" | "howtoplay" | "discussion" | "voting" | "reveal" | "night" | "ended";
 
 export interface CharacterPublic {
   id: string;
@@ -73,13 +73,19 @@ export interface GameStreamEvent {
     | "night_started"
     | "night_results"
     | "investigation_result"
+    | "discussion_warning"
+    | "discussion_ending"
     | "game_over"
+    | "stream_start"
+    | "stream_delta"
+    | "stream_end"
     | "error"
     | "done";
   character_id?: string;
   character_ids?: string[];
   character_name?: string;
   content?: string;
+  delta?: string;
   voice_id?: string;
   phase?: string;
   round?: number;
@@ -97,6 +103,8 @@ export interface GameStreamEvent {
   eliminated_ids?: string[];
   // game_over
   winner?: string;
+  // emotion from character responses/reactions
+  emotion?: string;
   // error
   error?: string;
   // night_action_prompt

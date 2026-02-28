@@ -1,9 +1,92 @@
 "use client";
 
-import { Vote, CheckCircle, AlertTriangle, Scale } from "lucide-react";
+import { Vote, CheckCircle, AlertTriangle, Scale, ArrowRight } from "lucide-react";
 import { useGameState } from "@/hooks/useGameState";
 import { useI18n } from "@/lib/i18n";
 import { seedToColor } from "@/components/CharacterCard";
+
+/* ── Running tally from staggered votes ────────────────────────── */
+
+function buildRunningTally(votes: Array<{ voterName: string; targetName: string }>) {
+  const tally: Record<string, number> = {};
+  for (const v of votes) {
+    tally[v.targetName] = (tally[v.targetName] || 0) + 1;
+  }
+  return tally;
+}
+
+/* ── Staggered vote reveal (shown while votes stream in) ──────── */
+
+function StaggeredVoteReveal({
+  votes,
+  totalVoters,
+}: {
+  votes: Array<{ voterName: string; targetName: string; timestamp: number }>;
+  totalVoters: number;
+}) {
+  const tally = buildRunningTally(votes);
+  const maxCount = Math.max(...Object.values(tally), 1);
+
+  return (
+    <div className="vote-center-card glass-card animate-fade-in">
+      <div className="vote-center-header">
+        <Vote size={20} style={{ color: "var(--accent)" }} />
+        <h2 className="vote-center-title">Votes Being Cast...</h2>
+        <p className="vote-center-subtitle">
+          {votes.length} of {totalVoters} council members have voted
+        </p>
+      </div>
+
+      {/* Individual vote entries with stagger */}
+      <div className="staggered-vote-list">
+        {votes.map((v, i) => (
+          <div
+            key={`${v.voterName}-${i}`}
+            className="staggered-vote-entry animate-vote-slide-in"
+            style={{ animationDelay: `${i * 0.3}s` }}
+          >
+            <span className="staggered-vote-voter">{v.voterName}</span>
+            <ArrowRight size={14} className="staggered-vote-arrow" />
+            <span className="staggered-vote-target">{v.targetName}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Running tally bar */}
+      {Object.keys(tally).length > 0 && (
+        <div className="staggered-tally">
+          <div className="staggered-tally-header">Running Tally</div>
+          <div className="vote-tally-list">
+            {Object.entries(tally)
+              .sort(([, a], [, b]) => b - a)
+              .map(([name, count]) => {
+                const pct = (count / maxCount) * 100;
+                return (
+                  <div key={name} className="vote-tally-row animate-fade-in-up">
+                    <div className="vote-tally-info">
+                      <span className="vote-tally-name">{name}</span>
+                      <span className="vote-tally-count">{count}</span>
+                    </div>
+                    <div className="vote-tally-bar-track">
+                      <div
+                        className="vote-tally-bar-fill"
+                        style={{
+                          width: `${pct}%`,
+                          background: "linear-gradient(90deg, var(--accent), var(--accent-hover))",
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Main Component ───────────────────────────────────────────── */
 
 export default function VotePanel() {
   const { t } = useI18n();
@@ -14,13 +97,24 @@ export default function VotePanel() {
     hasVoted,
     castVote,
     voteResults,
+    staggeredVotes,
   } = useGameState();
 
   if (!session) return null;
 
   const aliveCharacters = session.characters.filter((c) => !c.is_eliminated);
 
-  // Vote results view
+  // Show staggered vote reveal while votes are streaming in (after player votes, before tally)
+  if (hasVoted && !voteResults && staggeredVotes.length > 0) {
+    return (
+      <StaggeredVoteReveal
+        votes={staggeredVotes}
+        totalVoters={aliveCharacters.length}
+      />
+    );
+  }
+
+  // Vote results view (final tally)
   if (voteResults) {
     const isTie = voteResults.is_tie;
 

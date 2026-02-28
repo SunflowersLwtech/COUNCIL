@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, FileText, Loader2, Sparkles } from "lucide-react";
+import { Upload, FileText, Loader2, Sparkles, Mic, MicOff } from "lucide-react";
 import { useGameState } from "@/hooks/useGameState";
+import { useVoice } from "@/hooks/useVoice";
 import { useI18n } from "@/lib/i18n";
 
 export default function DocumentUpload() {
@@ -21,6 +22,13 @@ export default function DocumentUpload() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [textInput, setTextInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Voice input for textarea — appends transcribed text
+  const voice = useVoice({
+    onTranscript: (text) => {
+      setTextInput((prev) => (prev ? prev + " " + text : text));
+    },
+  });
 
   useEffect(() => {
     loadScenarios();
@@ -163,22 +171,83 @@ export default function DocumentUpload() {
 
           {/* Text input */}
           <div className="space-y-3">
-            <textarea
-              className="w-full p-4 rounded-xl text-sm resize-none"
-              style={{
-                background: "var(--bg-secondary)",
-                border: "1px solid var(--border)",
-                color: "var(--text-primary)",
-                minHeight: "120px",
-              }}
-              placeholder={t("game.upload.textPlaceholder")}
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-            />
+            <div className="relative">
+              <textarea
+                className="w-full p-4 pr-12 rounded-xl text-sm resize-none"
+                style={{
+                  background: "var(--bg-secondary)",
+                  border: voice.isListening
+                    ? "1px solid var(--critical)"
+                    : "1px solid var(--border)",
+                  color: "var(--text-primary)",
+                  minHeight: "120px",
+                  transition: "border-color 0.2s",
+                }}
+                placeholder={
+                  voice.isListening
+                    ? "Listening..."
+                    : t("game.upload.textPlaceholder")
+                }
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+              />
+              {/* Mic button inside textarea */}
+              <button
+                type="button"
+                onClick={() =>
+                  voice.isListening
+                    ? voice.stopListening()
+                    : voice.startListening()
+                }
+                className="absolute top-3 right-3 flex items-center justify-center rounded-lg transition-all"
+                style={{
+                  width: 32,
+                  height: 32,
+                  background: voice.isListening
+                    ? "rgba(239, 68, 68, 0.2)"
+                    : "rgba(255, 255, 255, 0.06)",
+                  border: voice.isListening
+                    ? "1px solid var(--critical)"
+                    : "1px solid rgba(255, 255, 255, 0.1)",
+                  color: voice.isListening
+                    ? "var(--critical)"
+                    : "var(--text-muted)",
+                  cursor: "pointer",
+                  animation: voice.isListening
+                    ? "recording-pulse 1.5s ease-in-out infinite"
+                    : "none",
+                }}
+                title={
+                  voice.isListening
+                    ? "Stop listening"
+                    : "Voice input"
+                }
+              >
+                {voice.isListening ? <MicOff size={14} /> : <Mic size={14} />}
+              </button>
+            </div>
+            {/* Partial transcript hint */}
+            {voice.isListening && voice.partialTranscript && (
+              <p
+                className="text-xs px-1 animate-fade-in"
+                style={{ color: "var(--text-muted)", fontStyle: "italic" }}
+              >
+                {voice.partialTranscript}
+              </p>
+            )}
+            {/* Voice error */}
+            {voice.errorMessage && (
+              <p
+                className="text-xs px-1"
+                style={{ color: "var(--critical)" }}
+              >
+                {voice.errorMessage}
+              </p>
+            )}
             <button
               className="demo-btn w-full flex items-center justify-center gap-2"
               onClick={handleTextSubmit}
-              disabled={!textInput.trim()}
+              disabled={!textInput.trim() || voice.isListening}
             >
               <FileText size={16} />
               {t("game.upload.createFromText")}

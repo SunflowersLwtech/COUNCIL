@@ -15,6 +15,34 @@ CLAUDE.md
 .claude/
 .mcp-sidecar/
 
+# ===== Playwright MCP =====
+playwright-report/
+playwright/.cache/
+test-results/
+playwright-state.json
+
+# ===== Configuration Files =====
+*.ini
+pytest.ini
+.editorconfig
+
+# ===== Images / Media =====
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.webp
+*.bmp
+*.ico
+*.tiff
+*.tif
+*.raw
+*.heic
+*.heif
+# Allow essential project images (uncomment specific files if needed)
+# !public/logo.png
+
 # ===== Python =====
 __pycache__/
 *.py[cod]
