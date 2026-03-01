@@ -1,0 +1,438 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 960 930">
+<defs>
+  <linearGradient id="a" x1="0" x2="960" y1="0" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#312e81"/></linearGradient>
+  <linearGradient id="bg1" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#fafafa"/><stop offset="100%" stop-color="#f1f5f9"/></linearGradient>
+  <marker id="arrow" markerHeight="6" markerWidth="8" orient="auto" refX="8" refY="3"><path fill="#94a3b8" d="m0 0 8 3-8 3Z"/></marker>
+  <marker id="arrow-violet" markerHeight="6" markerWidth="8" orient="auto" refX="8" refY="3"><path fill="#ec4899" d="m0 0 8 3-8 3Z"/></marker>
+  <marker id="arrow-pipe" markerHeight="5" markerWidth="7" orient="auto" refX="7" refY="2.5"><path fill="#7c3aed" d="m0 0 7 2.5-7 2.5Z"/></marker>
+  <filter id="b" width="108%" height="108%" x="-4%" y="-4%"><feDropShadow dx="0" dy="2" flood-color="#000" flood-opacity=".08" stdDeviation="4"/></filter>
+</defs>
+
+<!-- Background -->
+<rect width="960" height="930" fill="#fff" rx="12"/>
+
+<!-- Header bar -->
+<rect width="960" height="56" fill="url(#a)" rx="12"/>
+<path fill="url(#a)" d="M0 44h960v12H0z"/>
+<text x="480" y="36" fill="#fff" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="1.5" text-anchor="middle">MODULAR COGNITIVE SKILLS ARCHITECTURE</text>
+
+<!-- Section: 7 Skills Grid -->
+<text x="40" y="86" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="14" font-weight="700">Skill Modules</text>
+<text x="175" y="86" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10">Loaded by priority order (lowest first) from YAML skill definitions</text>
+
+<!-- ================================================================ -->
+<!-- ROW 1: Skills 1-4 -->
+<!-- ================================================================ -->
+
+<!-- Skill 1: Strategic Reasoning (Priority 10) -->
+<g filter="url(#b)">
+  <rect width="213" height="128" x="30" y="98" fill="#fff" stroke="#ef4444" stroke-width="2" rx="10"/>
+  <rect width="213" height="32" x="30" y="98" fill="#fef2f2" rx="10"/>
+  <rect width="213" height="16" x="30" y="114" fill="#fef2f2"/>
+  <rect width="28" height="16" x="38" y="103" fill="#ef4444" rx="8"/>
+  <text x="52" y="114" fill="#fff" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">10</text>
+  <circle cx="82" cy="111" r="8" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+  <circle cx="82" cy="111" r="3.5" fill="#ef4444"/>
+  <line x1="82" y1="100" x2="82" y2="104" stroke="#ef4444" stroke-width="1.5"/>
+  <line x1="82" y1="118" x2="82" y2="122" stroke="#ef4444" stroke-width="1.5"/>
+  <line x1="71" y1="111" x2="75" y2="111" stroke="#ef4444" stroke-width="1.5"/>
+  <line x1="89" y1="111" x2="93" y2="111" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="100" y="115" fill="#991b1b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Strategic Reasoning</text>
+  <text x="42" y="147" fill="#1e293b" font-family="Arial,sans-serif" font-size="9.5" font-weight="600">SSRSR 5-step pipeline</text>
+  <text x="42" y="162" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">Situation-Suspicion-Reflection</text>
+  <text x="42" y="174" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">-Strategy-Response analysis</text>
+  <rect width="58" height="14" x="42" y="185" fill="#fef2f2" stroke="#fca5a5" rx="7"/>
+  <text x="71" y="195" fill="#dc2626" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">char_agent</text>
+  <rect width="50" height="14" x="104" y="185" fill="#fef2f2" stroke="#fca5a5" rx="7"/>
+  <text x="129" y="195" fill="#dc2626" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">vote</text>
+  <rect width="50" height="14" x="158" y="185" fill="#fef2f2" stroke="#fca5a5" rx="7"/>
+  <text x="183" y="195" fill="#dc2626" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">night</text>
+</g>
+
+<!-- Skill 2: Contrastive Examples (Priority 15) -->
+<g filter="url(#b)">
+  <rect width="213" height="128" x="258" y="98" fill="#fff" stroke="#f59e0b" stroke-width="2" rx="10"/>
+  <rect width="213" height="32" x="258" y="98" fill="#fffbeb" rx="10"/>
+  <rect width="213" height="16" x="258" y="114" fill="#fffbeb"/>
+  <rect width="28" height="16" x="266" y="103" fill="#f59e0b" rx="8"/>
+  <text x="280" y="114" fill="#fff" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">15</text>
+  <g transform="translate(305,104)">
+    <path d="M0 7h14M7 0v14" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="2" cy="3" r="2" fill="#f59e0b" opacity=".6"/>
+    <circle cx="12" cy="3" r="2" fill="#f59e0b"/>
+  </g>
+  <text x="326" y="115" fill="#92400e" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Contrastive Examples</text>
+  <text x="270" y="147" fill="#1e293b" font-family="Arial,sans-serif" font-size="9.5" font-weight="600">Good/bad behavioral examples</text>
+  <text x="270" y="162" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">Shows excellent play vs. common</text>
+  <text x="270" y="174" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">mistakes via contrastive prompting</text>
+  <rect width="58" height="14" x="270" y="185" fill="#fffbeb" stroke="#fcd34d" rx="7"/>
+  <text x="299" y="195" fill="#b45309" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">char_agent</text>
+  <rect width="50" height="14" x="332" y="185" fill="#fffbeb" stroke="#fcd34d" rx="7"/>
+  <text x="357" y="195" fill="#b45309" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">vote</text>
+</g>
+
+<!-- Skill 3: Memory Consolidation (Priority 20) -->
+<g filter="url(#b)">
+  <rect width="213" height="128" x="486" y="98" fill="#fff" stroke="#3b82f6" stroke-width="2" rx="10"/>
+  <rect width="213" height="32" x="486" y="98" fill="#eff6ff" rx="10"/>
+  <rect width="213" height="16" x="486" y="114" fill="#eff6ff"/>
+  <rect width="28" height="16" x="494" y="103" fill="#3b82f6" rx="8"/>
+  <text x="508" y="114" fill="#fff" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">20</text>
+  <g transform="translate(530,103)">
+    <path d="M7 1C4.5 1 2 3 2 5.5c0 1.5.7 2.5 1.5 3.2C2.5 9.5 2 11 2 12c0 1.5 1.5 3 3 3h4c1.5 0 3-1.5 3-3 0-1-.5-2.5-1.5-3.3C11.3 8 12 7 12 5.5 12 3 9.5 1 7 1z" fill="none" stroke="#3b82f6" stroke-width="1.4"/>
+    <path d="M7 1v14M4 6h6M4 10h6" stroke="#3b82f6" stroke-width="1" stroke-linecap="round" opacity=".5"/>
+  </g>
+  <text x="550" y="115" fill="#1e40af" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Memory Consolidation</text>
+  <text x="498" y="147" fill="#1e293b" font-family="Arial,sans-serif" font-size="9.5" font-weight="600">3-tier STM / Episodic / Semantic</text>
+  <text x="498" y="162" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">Maintains beliefs about each</text>
+  <text x="498" y="174" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">player, synthesizes round memories</text>
+  <rect width="58" height="14" x="498" y="185" fill="#eff6ff" stroke="#93c5fd" rx="7"/>
+  <text x="527" y="195" fill="#2563eb" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">char_agent</text>
+  <rect width="58" height="14" x="560" y="185" fill="#eff6ff" stroke="#93c5fd" rx="7"/>
+  <text x="589" y="195" fill="#2563eb" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">summary</text>
+</g>
+
+<!-- Skill 4: Goal-Driven Behavior (Priority 25) -->
+<g filter="url(#b)">
+  <rect width="213" height="128" x="714" y="98" fill="#fff" stroke="#8b5cf6" stroke-width="2" rx="10"/>
+  <rect width="213" height="32" x="714" y="98" fill="#f5f3ff" rx="10"/>
+  <rect width="213" height="16" x="714" y="114" fill="#f5f3ff"/>
+  <rect width="28" height="16" x="722" y="103" fill="#8b5cf6" rx="8"/>
+  <text x="736" y="114" fill="#fff" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">25</text>
+  <g transform="translate(760,104)">
+    <circle cx="7" cy="7" r="6.5" fill="none" stroke="#8b5cf6" stroke-width="1.4"/>
+    <path d="M7 3v2M7 10v2M3 7h2M10 7h2" stroke="#8b5cf6" stroke-width="1" stroke-linecap="round"/>
+    <path d="M5 5l2 2 4-4" stroke="#8b5cf6" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="780" y="115" fill="#5b21b6" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Goal-Driven Behavior</text>
+  <text x="726" y="147" fill="#1e293b" font-family="Arial,sans-serif" font-size="9.5" font-weight="600">Emotion-goal coupling</text>
+  <text x="726" y="162" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">Personal sub-goals layered on</text>
+  <text x="726" y="174" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">win conditions, dynamic motivation</text>
+  <rect width="58" height="14" x="726" y="185" fill="#f5f3ff" stroke="#c4b5fd" rx="7"/>
+  <text x="755" y="195" fill="#7c3aed" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">char_agent</text>
+  <rect width="50" height="14" x="788" y="185" fill="#f5f3ff" stroke="#c4b5fd" rx="7"/>
+  <text x="813" y="195" fill="#7c3aed" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">night</text>
+</g>
+
+<!-- ================================================================ -->
+<!-- ROW 2: Skills 5-7 -->
+<!-- ================================================================ -->
+
+<!-- Skill 5: Deception Mastery (Priority 30) -->
+<g filter="url(#b)">
+  <rect width="280" height="128" x="30" y="244" fill="#fff" stroke="#ec4899" stroke-width="2" rx="10"/>
+  <rect width="280" height="32" x="30" y="244" fill="#fdf2f8" rx="10"/>
+  <rect width="280" height="16" x="30" y="260" fill="#fdf2f8"/>
+  <rect width="28" height="16" x="38" y="249" fill="#ec4899" rx="8"/>
+  <text x="52" y="260" fill="#fff" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">30</text>
+  <g transform="translate(74,249)">
+    <circle cx="5" cy="7" r="5.5" fill="none" stroke="#ec4899" stroke-width="1.3"/>
+    <circle cx="3.5" cy="6" r="1" fill="#ec4899"/>
+    <circle cx="6.5" cy="6" r="1" fill="#ec4899"/>
+    <path d="M3 9c1 1.5 3 1.5 4 0" stroke="#ec4899" stroke-width="1" fill="none" stroke-linecap="round"/>
+    <circle cx="11" cy="7" r="5.5" fill="none" stroke="#ec4899" stroke-width="1.3" opacity=".5"/>
+  </g>
+  <text x="100" y="261" fill="#9d174d" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Deception Mastery</text>
+  <rect width="100" height="14" x="200" y="250" fill="#fce7f3" stroke="#f9a8d4" rx="7"/>
+  <text x="250" y="260" fill="#be185d" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">depends: strategic</text>
+  <text x="42" y="293" fill="#1e293b" font-family="Arial,sans-serif" font-size="9.5" font-weight="600">Faction-split evil/good strategies</text>
+  <text x="42" y="308" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">Evil: deflection, alibi, bus-throwing</text>
+  <text x="42" y="320" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">Good: consistency, vote pattern, pressure</text>
+  <rect width="58" height="14" x="42" y="333" fill="#fdf2f8" stroke="#f9a8d4" rx="7"/>
+  <text x="71" y="343" fill="#be185d" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">char_agent</text>
+  <rect width="50" height="14" x="104" y="333" fill="#fdf2f8" stroke="#f9a8d4" rx="7"/>
+  <text x="129" y="343" fill="#be185d" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">vote</text>
+</g>
+
+<!-- Dependency arrow -->
+<path stroke="#ec4899" stroke-width="1.8" stroke-dasharray="5,3" marker-end="url(#arrow-violet)" d="M136 226 L136 244" fill="none"/>
+<rect width="50" height="12" x="111" y="229" fill="#fdf2f8" stroke="#f9a8d4" rx="6"/>
+<text x="136" y="238" fill="#be185d" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">depends</text>
+
+<!-- Skill 6: Discussion Dynamics (Priority 40) -->
+<g filter="url(#b)">
+  <rect width="280" height="128" x="330" y="244" fill="#fff" stroke="#14b8a6" stroke-width="2" rx="10"/>
+  <rect width="280" height="32" x="330" y="244" fill="#f0fdfa" rx="10"/>
+  <rect width="280" height="16" x="330" y="260" fill="#f0fdfa"/>
+  <rect width="28" height="16" x="338" y="249" fill="#14b8a6" rx="8"/>
+  <text x="352" y="260" fill="#fff" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">40</text>
+  <g transform="translate(374,249)">
+    <rect x="0" y="0" width="10" height="8" rx="2" fill="none" stroke="#14b8a6" stroke-width="1.3"/>
+    <path d="M2 8v3l2.5-3" stroke="#14b8a6" stroke-width="1.3" fill="none" stroke-linejoin="round"/>
+    <rect x="5" y="3" width="10" height="8" rx="2" fill="none" stroke="#14b8a6" stroke-width="1.3" opacity=".5"/>
+    <path d="M13 11v3l-2.5-3" stroke="#14b8a6" stroke-width="1.3" fill="none" stroke-linejoin="round" opacity=".5"/>
+  </g>
+  <text x="398" y="261" fill="#0f766e" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Discussion Dynamics</text>
+  <text x="342" y="293" fill="#1e293b" font-family="Arial,sans-serif" font-size="9.5" font-weight="600">Turn-taking, anti-repetition</text>
+  <text x="342" y="308" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">Talk-frequency awareness, natural</text>
+  <text x="342" y="320" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">conversation pacing, name-addressing</text>
+  <rect width="58" height="14" x="342" y="333" fill="#f0fdfa" stroke="#5eead4" rx="7"/>
+  <text x="371" y="343" fill="#0d9488" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">char_agent</text>
+  <rect width="58" height="14" x="404" y="333" fill="#f0fdfa" stroke="#5eead4" rx="7"/>
+  <text x="433" y="343" fill="#0d9488" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">reaction</text>
+</g>
+
+<!-- Skill 7: Social Evaluation (Priority 60) -->
+<g filter="url(#b)">
+  <rect width="280" height="128" x="630" y="244" fill="#fff" stroke="#6366f1" stroke-width="2" rx="10"/>
+  <rect width="280" height="32" x="630" y="244" fill="#eef2ff" rx="10"/>
+  <rect width="280" height="16" x="630" y="260" fill="#eef2ff"/>
+  <rect width="28" height="16" x="638" y="249" fill="#6366f1" rx="8"/>
+  <text x="652" y="260" fill="#fff" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">60</text>
+  <g transform="translate(674,249)">
+    <circle cx="7" cy="4" r="3" fill="none" stroke="#6366f1" stroke-width="1.3"/>
+    <path d="M1 14c0-3.3 2.7-6 6-6s6 2.7 6 6" fill="none" stroke="#6366f1" stroke-width="1.3"/>
+    <circle cx="13" cy="5" r="2" fill="none" stroke="#6366f1" stroke-width="1" opacity=".5"/>
+    <circle cx="1" cy="5" r="2" fill="none" stroke="#6366f1" stroke-width="1" opacity=".5"/>
+  </g>
+  <text x="698" y="261" fill="#4338ca" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Social Evaluation</text>
+  <text x="642" y="293" fill="#1e293b" font-family="Arial,sans-serif" font-size="9.5" font-weight="600">Social dynamics for narration</text>
+  <text x="642" y="308" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">7D social intelligence evaluation:</text>
+  <text x="642" y="320" fill="#64748b" font-family="Arial,sans-serif" font-size="8.5">influence shifts, trust erosion, tension</text>
+  <rect width="58" height="14" x="642" y="333" fill="#eef2ff" stroke="#a5b4fc" rx="7"/>
+  <text x="671" y="343" fill="#4f46e5" font-family="Arial,sans-serif" font-size="7" font-weight="600" text-anchor="middle">narration</text>
+</g>
+
+<!-- ================================================================ -->
+<!-- FACTION-CONDITIONAL INJECTION CALLOUT -->
+<!-- ================================================================ -->
+<text x="40" y="402" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="14" font-weight="700">Faction-Conditional Injection</text>
+<text x="295" y="402" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10">Same skill, different prompt content per faction alignment</text>
+
+<g filter="url(#b)">
+  <rect width="880" height="108" x="40" y="414" fill="#fff" stroke="#e2e8f0" stroke-width="1.5" rx="10"/>
+  <!-- Evil side -->
+  <rect width="440" height="108" x="40" y="414" fill="#fef2f2" rx="10"/>
+  <rect width="10" height="108" x="470" y="414" fill="#fef2f2" rx="0"/>
+  <!-- Good side -->
+  <rect width="440" height="108" x="480" y="414" fill="#eff6ff" rx="10"/>
+  <rect width="10" height="108" x="480" y="414" fill="#eff6ff" rx="0"/>
+
+  <!-- Evil header -->
+  <rect width="68" height="20" x="55" y="422" fill="#ef4444" rx="10"/>
+  <text x="89" y="436" fill="#fff" font-family="Arial,sans-serif" font-size="10" font-weight="700" text-anchor="middle">EVIL</text>
+  <text x="130" y="436" fill="#991b1b" font-family="Arial,sans-serif" font-size="9" font-weight="600">Werewolf-aligned agents receive:</text>
+
+  <g transform="translate(55,448)">
+    <rect width="8" height="8" rx="2" fill="#fca5a5"/>
+    <text x="14" y="8" fill="#7f1d1d" font-family="Arial,sans-serif" font-size="9">Deflection techniques -- redirect suspicion with evidence</text>
+  </g>
+  <g transform="translate(55,464)">
+    <rect width="8" height="8" rx="2" fill="#fca5a5"/>
+    <text x="14" y="8" fill="#7f1d1d" font-family="Arial,sans-serif" font-size="9">Alibi building -- proactive trust signals for later capital</text>
+  </g>
+  <g transform="translate(55,480)">
+    <rect width="8" height="8" rx="2" fill="#fca5a5"/>
+    <text x="14" y="8" fill="#7f1d1d" font-family="Arial,sans-serif" font-size="9">Bus-throwing -- sacrifice allies to preserve own cover</text>
+  </g>
+  <g transform="translate(55,496)">
+    <rect width="8" height="8" rx="2" fill="#fca5a5"/>
+    <text x="14" y="8" fill="#7f1d1d" font-family="Arial,sans-serif" font-size="9">Controlled information leaking</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="480" y1="422" x2="480" y2="514" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <rect width="24" height="24" x="468" y="456" fill="#fff" stroke="#e2e8f0" stroke-width="1" rx="12"/>
+  <text x="480" y="473" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10" font-weight="700" text-anchor="middle">vs</text>
+
+  <!-- Good header -->
+  <rect width="68" height="20" x="505" y="422" fill="#3b82f6" rx="10"/>
+  <text x="539" y="436" fill="#fff" font-family="Arial,sans-serif" font-size="10" font-weight="700" text-anchor="middle">GOOD</text>
+  <text x="580" y="436" fill="#1e40af" font-family="Arial,sans-serif" font-size="9" font-weight="600">Village-aligned agents receive:</text>
+
+  <g transform="translate(505,448)">
+    <rect width="8" height="8" rx="2" fill="#93c5fd"/>
+    <text x="14" y="8" fill="#1e3a5f" font-family="Arial,sans-serif" font-size="9">Consistency checking -- track claims across rounds</text>
+  </g>
+  <g transform="translate(505,464)">
+    <rect width="8" height="8" rx="2" fill="#93c5fd"/>
+    <text x="14" y="8" fill="#1e3a5f" font-family="Arial,sans-serif" font-size="9">Vote pattern analysis -- detect protective voting blocs</text>
+  </g>
+  <g transform="translate(505,480)">
+    <rect width="8" height="8" rx="2" fill="#93c5fd"/>
+    <text x="14" y="8" fill="#1e3a5f" font-family="Arial,sans-serif" font-size="9">Pressure testing -- watch for defensive over-explanation</text>
+  </g>
+  <g transform="translate(505,496)">
+    <rect width="8" height="8" rx="2" fill="#93c5fd"/>
+    <text x="14" y="8" fill="#1e3a5f" font-family="Arial,sans-serif" font-size="9">Silence analysis -- faction signals from inaction</text>
+  </g>
+</g>
+
+<!-- ================================================================ -->
+<!-- INJECTION TARGETS ROW -->
+<!-- ================================================================ -->
+<text x="40" y="554" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="14" font-weight="700">Injection Targets</text>
+<text x="195" y="554" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10">7 prompt injection points in the agent pipeline</text>
+
+<g filter="url(#b)">
+  <rect width="880" height="58" x="40" y="566" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" rx="10"/>
+
+  <rect width="108" height="32" x="52" y="579" fill="#fff" stroke="#7c3aed" stroke-width="1.5" rx="8"/>
+  <circle cx="66" cy="595" r="5" fill="#7c3aed" opacity=".15"/>
+  <circle cx="66" cy="595" r="2.5" fill="#7c3aed"/>
+  <text x="112" y="599" fill="#5b21b6" font-family="Arial,sans-serif" font-size="9" font-weight="600" text-anchor="end">character_agent</text>
+
+  <path stroke="#cbd5e1" stroke-width="1.2" marker-end="url(#arrow)" d="M164 595h12"/>
+
+  <rect width="88" height="32" x="180" y="579" fill="#fff" stroke="#7c3aed" stroke-width="1.5" rx="8"/>
+  <circle cx="194" cy="595" r="5" fill="#7c3aed" opacity=".15"/>
+  <circle cx="194" cy="595" r="2.5" fill="#7c3aed"/>
+  <text x="260" y="599" fill="#5b21b6" font-family="Arial,sans-serif" font-size="9" font-weight="600" text-anchor="end">vote_prompt</text>
+
+  <path stroke="#cbd5e1" stroke-width="1.2" marker-end="url(#arrow)" d="M272 595h12"/>
+
+  <rect width="88" height="32" x="288" y="579" fill="#fff" stroke="#7c3aed" stroke-width="1.5" rx="8"/>
+  <circle cx="302" cy="595" r="5" fill="#7c3aed" opacity=".15"/>
+  <circle cx="302" cy="595" r="2.5" fill="#7c3aed"/>
+  <text x="368" y="599" fill="#5b21b6" font-family="Arial,sans-serif" font-size="9" font-weight="600" text-anchor="end">night_action</text>
+
+  <path stroke="#cbd5e1" stroke-width="1.2" marker-end="url(#arrow)" d="M380 595h12"/>
+
+  <rect width="100" height="32" x="396" y="579" fill="#fff" stroke="#7c3aed" stroke-width="1.5" rx="8"/>
+  <circle cx="410" cy="595" r="5" fill="#7c3aed" opacity=".15"/>
+  <circle cx="410" cy="595" r="2.5" fill="#7c3aed"/>
+  <text x="488" y="599" fill="#5b21b6" font-family="Arial,sans-serif" font-size="9" font-weight="600" text-anchor="end">round_summary</text>
+
+  <path stroke="#cbd5e1" stroke-width="1.2" marker-end="url(#arrow)" d="M500 595h12"/>
+
+  <rect width="108" height="32" x="516" y="579" fill="#fff" stroke="#7c3aed" stroke-width="1.5" rx="8"/>
+  <circle cx="530" cy="595" r="5" fill="#7c3aed" opacity=".15"/>
+  <circle cx="530" cy="595" r="2.5" fill="#7c3aed"/>
+  <text x="616" y="599" fill="#5b21b6" font-family="Arial,sans-serif" font-size="8" font-weight="600" text-anchor="end">spont_reaction</text>
+
+  <path stroke="#cbd5e1" stroke-width="1.2" marker-end="url(#arrow)" d="M628 595h12"/>
+
+  <rect width="76" height="32" x="644" y="579" fill="#fff" stroke="#7c3aed" stroke-width="1.5" rx="8"/>
+  <circle cx="658" cy="595" r="5" fill="#7c3aed" opacity=".15"/>
+  <circle cx="658" cy="595" r="2.5" fill="#7c3aed"/>
+  <text x="712" y="599" fill="#5b21b6" font-family="Arial,sans-serif" font-size="9" font-weight="600" text-anchor="end">narration</text>
+
+  <path stroke="#cbd5e1" stroke-width="1.2" marker-end="url(#arrow)" d="M724 595h12"/>
+
+  <rect width="116" height="32" x="740" y="579" fill="#fff" stroke="#7c3aed" stroke-width="1.5" rx="8"/>
+  <circle cx="754" cy="595" r="5" fill="#7c3aed" opacity=".15"/>
+  <circle cx="754" cy="595" r="2.5" fill="#7c3aed"/>
+  <text x="848" y="599" fill="#5b21b6" font-family="Arial,sans-serif" font-size="8" font-weight="600" text-anchor="end">responder_sel</text>
+</g>
+
+<!-- ================================================================ -->
+<!-- SKILLLOADER PIPELINE -->
+<!-- ================================================================ -->
+<text x="40" y="660" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="14" font-weight="700">SkillLoader Pipeline</text>
+<text x="225" y="660" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10">Runtime skill discovery, validation, and injection</text>
+
+<g filter="url(#b)">
+  <rect width="880" height="90" x="40" y="672" fill="#fafafa" stroke="#e2e8f0" stroke-width="1.5" rx="10"/>
+
+  <rect width="118" height="50" x="56" y="692" fill="#fff" stroke="#6366f1" stroke-width="1.5" rx="8"/>
+  <rect width="118" height="18" x="56" y="692" fill="#6366f1" rx="8"/>
+  <rect width="118" height="8" x="56" y="702" fill="#6366f1"/>
+  <text x="115" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" text-anchor="middle">YAML Discovery</text>
+  <text x="115" y="726" fill="#4338ca" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">Scan SKILL.md files</text>
+  <text x="115" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">in skills/ directory</text>
+
+  <path stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-pipe)" d="M178 717h18"/>
+
+  <rect width="118" height="50" x="200" y="692" fill="#fff" stroke="#8b5cf6" stroke-width="1.5" rx="8"/>
+  <rect width="118" height="18" x="200" y="692" fill="#8b5cf6" rx="8"/>
+  <rect width="118" height="8" x="200" y="702" fill="#8b5cf6"/>
+  <text x="259" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8" font-weight="700" text-anchor="middle">Dependency Resolution</text>
+  <text x="259" y="726" fill="#6d28d9" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">Topological sort</text>
+  <text x="259" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">deception needs strategic</text>
+
+  <path stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-pipe)" d="M322 717h18"/>
+
+  <rect width="118" height="50" x="344" y="692" fill="#fff" stroke="#a855f7" stroke-width="1.5" rx="8"/>
+  <rect width="118" height="18" x="344" y="692" fill="#a855f7" rx="8"/>
+  <rect width="118" height="8" x="344" y="702" fill="#a855f7"/>
+  <text x="403" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" text-anchor="middle">Conflict Check</text>
+  <text x="403" y="726" fill="#7e22ce" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">Detect conflicts field</text>
+  <text x="403" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">mutual exclusion rules</text>
+
+  <path stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-pipe)" d="M466 717h18"/>
+
+  <rect width="108" height="50" x="488" y="692" fill="#fff" stroke="#c026d3" stroke-width="1.5" rx="8"/>
+  <rect width="108" height="18" x="488" y="692" fill="#c026d3" rx="8"/>
+  <rect width="108" height="8" x="488" y="702" fill="#c026d3"/>
+  <text x="542" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" text-anchor="middle">Priority Sort</text>
+  <text x="542" y="726" fill="#a21caf" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">Ascending priority</text>
+  <text x="542" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">10 &gt; 15 &gt; ... &gt; 60</text>
+
+  <path stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-pipe)" d="M600 717h18"/>
+
+  <rect width="108" height="50" x="622" y="692" fill="#fff" stroke="#e11d48" stroke-width="1.5" rx="8"/>
+  <rect width="108" height="18" x="622" y="692" fill="#e11d48" rx="8"/>
+  <rect width="108" height="8" x="622" y="702" fill="#e11d48"/>
+  <text x="676" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" text-anchor="middle">Faction Filter</text>
+  <text x="676" y="726" fill="#be123c" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">evil vs good variant</text>
+  <text x="676" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">*_evil.md / *_good.md</text>
+
+  <path stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-pipe)" d="M734 717h18"/>
+
+  <rect width="142" height="50" x="756" y="692" fill="#fff" stroke="#f59e0b" stroke-width="1.5" rx="8"/>
+  <rect width="142" height="18" x="756" y="692" fill="#f59e0b" rx="8"/>
+  <rect width="142" height="8" x="756" y="702" fill="#f59e0b"/>
+  <text x="827" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" text-anchor="middle">Prompt Injection</text>
+  <text x="827" y="726" fill="#b45309" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">Append to system prompt</text>
+  <text x="827" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">per target, per agent</text>
+</g>
+
+<!-- ================================================================ -->
+<!-- COVERAGE MATRIX -->
+<!-- ================================================================ -->
+<text x="40" y="800" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="14" font-weight="700">Skill-to-Target Coverage Matrix</text>
+
+<g filter="url(#b)">
+  <rect width="880" height="104" x="40" y="810" fill="#fff" stroke="#e2e8f0" stroke-width="1.5" rx="10"/>
+
+  <!-- Column headers -->
+  <text x="185" y="828" fill="#94a3b8" font-family="Arial,sans-serif" font-size="7.5" font-weight="600" text-anchor="middle">char_agent</text>
+  <text x="285" y="828" fill="#94a3b8" font-family="Arial,sans-serif" font-size="7.5" font-weight="600" text-anchor="middle">vote_prompt</text>
+  <text x="385" y="828" fill="#94a3b8" font-family="Arial,sans-serif" font-size="7.5" font-weight="600" text-anchor="middle">night_action</text>
+  <text x="485" y="828" fill="#94a3b8" font-family="Arial,sans-serif" font-size="7.5" font-weight="600" text-anchor="middle">round_sum</text>
+  <text x="585" y="828" fill="#94a3b8" font-family="Arial,sans-serif" font-size="7.5" font-weight="600" text-anchor="middle">spont_react</text>
+  <text x="685" y="828" fill="#94a3b8" font-family="Arial,sans-serif" font-size="7.5" font-weight="600" text-anchor="middle">narration</text>
+  <text x="785" y="828" fill="#94a3b8" font-family="Arial,sans-serif" font-size="7.5" font-weight="600" text-anchor="middle">resp_sel</text>
+
+  <line x1="50" y1="833" x2="910" y2="833" stroke="#f1f5f9" stroke-width="1"/>
+
+  <!-- Row 1: Strategic -->
+  <text x="60" y="847" fill="#ef4444" font-family="Arial,sans-serif" font-size="8" font-weight="600">Strategic</text>
+  <circle cx="185" cy="844" r="4.5" fill="#ef4444"/><circle cx="285" cy="844" r="4.5" fill="#ef4444"/><circle cx="385" cy="844" r="4.5" fill="#ef4444"/>
+  <circle cx="485" cy="844" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="585" cy="844" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="685" cy="844" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="785" cy="844" r="4" fill="#f1f5f9" stroke="#e2e8f0"/>
+
+  <!-- Row 2: Contrastive -->
+  <text x="60" y="857" fill="#f59e0b" font-family="Arial,sans-serif" font-size="8" font-weight="600">Contrastive</text>
+  <circle cx="185" cy="854" r="4.5" fill="#f59e0b"/><circle cx="285" cy="854" r="4.5" fill="#f59e0b"/>
+  <circle cx="385" cy="854" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="485" cy="854" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="585" cy="854" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="685" cy="854" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="785" cy="854" r="4" fill="#f1f5f9" stroke="#e2e8f0"/>
+
+  <!-- Row 3: Memory -->
+  <text x="60" y="867" fill="#3b82f6" font-family="Arial,sans-serif" font-size="8" font-weight="600">Memory</text>
+  <circle cx="185" cy="864" r="4.5" fill="#3b82f6"/>
+  <circle cx="285" cy="864" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="385" cy="864" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="485" cy="864" r="4.5" fill="#3b82f6"/><circle cx="585" cy="864" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="685" cy="864" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="785" cy="864" r="4" fill="#f1f5f9" stroke="#e2e8f0"/>
+
+  <!-- Row 4: Goal-Driven -->
+  <text x="60" y="877" fill="#8b5cf6" font-family="Arial,sans-serif" font-size="8" font-weight="600">Goal-Driven</text>
+  <circle cx="185" cy="874" r="4.5" fill="#8b5cf6"/>
+  <circle cx="285" cy="874" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="385" cy="874" r="4.5" fill="#8b5cf6"/><circle cx="485" cy="874" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="585" cy="874" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="685" cy="874" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="785" cy="874" r="4" fill="#f1f5f9" stroke="#e2e8f0"/>
+
+  <!-- Row 5: Deception -->
+  <text x="60" y="887" fill="#ec4899" font-family="Arial,sans-serif" font-size="8" font-weight="600">Deception</text>
+  <circle cx="185" cy="884" r="4.5" fill="#ec4899"/><circle cx="285" cy="884" r="4.5" fill="#ec4899"/>
+  <circle cx="385" cy="884" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="485" cy="884" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="585" cy="884" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="685" cy="884" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="785" cy="884" r="4" fill="#f1f5f9" stroke="#e2e8f0"/>
+
+  <!-- Row 6: Discussion -->
+  <text x="60" y="897" fill="#14b8a6" font-family="Arial,sans-serif" font-size="8" font-weight="600">Discussion</text>
+  <circle cx="185" cy="894" r="4.5" fill="#14b8a6"/>
+  <circle cx="285" cy="894" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="385" cy="894" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="485" cy="894" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="585" cy="894" r="4.5" fill="#14b8a6"/><circle cx="685" cy="894" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="785" cy="894" r="4" fill="#f1f5f9" stroke="#e2e8f0"/>
+
+  <!-- Row 7: Social Eval -->
+  <text x="60" y="907" fill="#6366f1" font-family="Arial,sans-serif" font-size="8" font-weight="600">Social Eval</text>
+  <circle cx="185" cy="904" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="285" cy="904" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="385" cy="904" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="485" cy="904" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="585" cy="904" r="4" fill="#f1f5f9" stroke="#e2e8f0"/><circle cx="685" cy="904" r="4.5" fill="#6366f1"/><circle cx="785" cy="904" r="4" fill="#f1f5f9" stroke="#e2e8f0"/>
+</g>
+
+<!-- ================================================================ -->
+<!-- FOOTER -->
+<!-- ================================================================ -->
+<text x="480" y="925" fill="#94a3b8" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" text-anchor="middle">COUNCIL -- Modular Cognitive Skills Architecture -- Mistral AI Worldwide Hackathon 2026</text>
+</svg>
