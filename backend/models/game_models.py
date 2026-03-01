@@ -20,6 +20,16 @@ class WorldModel(BaseModel):
     win_conditions: list[dict] = Field(default_factory=list)
     phases: list[dict] = Field(default_factory=list)
     flavor_text: str = ""
+    recommended_player_count: int = 7
+
+    @field_validator("recommended_player_count", mode="before")
+    @classmethod
+    def clamp_player_count(cls, v: Any) -> int:
+        try:
+            v = int(v)
+        except (TypeError, ValueError):
+            return 7
+        return max(5, min(v, 8))
 
     @field_validator("title", "setting", "flavor_text", mode="before")
     @classmethod

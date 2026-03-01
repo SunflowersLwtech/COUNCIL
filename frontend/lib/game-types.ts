@@ -72,6 +72,7 @@ export interface GameStreamEvent {
     | "player_eliminated"
     | "night_started"
     | "night_results"
+    | "night_kill_reveal"
     | "investigation_result"
     | "discussion_warning"
     | "discussion_ending"
@@ -102,6 +103,13 @@ export interface GameStreamEvent {
   narration?: string;
   // night results
   eliminated_ids?: string[];
+  // night_kill_reveal fields
+  win_condition?: string;
+  hidden_knowledge?: string[];
+  behavioral_rules?: string[];
+  persona?: string;
+  public_role?: string;
+  avatar_seed?: string;
   // game_over
   winner?: string;
   // emotion from character responses/reactions
@@ -111,6 +119,7 @@ export interface GameStreamEvent {
   // night_action_prompt
   action_type?: string;
   eligible_targets?: NightActionTarget[];
+  allies?: Array<{ id: string; name: string; avatar_seed: string }>;
   // investigation_result
   investigation_result?: { name: string; faction: string };
   // player_eliminated — all characters revealed for ghost mode

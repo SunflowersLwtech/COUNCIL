@@ -9,6 +9,7 @@ Return valid JSON with these fields:
 - win_conditions: array of {faction, condition}
 - phases: array of {name, duration, description}
 - flavor_text: atmospheric text for the game
+- recommended_player_count: integer 5-8, the ideal number of AI characters for this world (more factions/roles → more players; simple setups → fewer)
 
 If the document is not a game rulebook, creatively interpret it as a social deduction scenario:
 - Extract opposing groups/factions

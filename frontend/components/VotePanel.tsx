@@ -2,6 +2,7 @@
 
 import { Vote, CheckCircle, AlertTriangle, Scale, ArrowRight } from "lucide-react";
 import { useGameState } from "@/hooks/useGameState";
+import { useSFX } from "@/hooks/useSFX";
 import { useI18n } from "@/lib/i18n";
 import { seedToColor } from "@/components/CharacterCard";
 
@@ -99,6 +100,7 @@ export default function VotePanel() {
     voteResults,
     staggeredVotes,
   } = useGameState();
+  const sfx = useSFX();
 
   if (!session) return null;
 
@@ -229,7 +231,7 @@ export default function VotePanel() {
       <button
         className="demo-btn vote-cast-btn"
         disabled={!selectedVote || hasVoted}
-        onClick={() => selectedVote && castVote(selectedVote)}
+        onClick={() => { if (selectedVote) { sfx.playVote(); castVote(selectedVote); } }}
       >
         {hasVoted ? t("game.vote.waiting") : t("game.vote.confirm")}
       </button>

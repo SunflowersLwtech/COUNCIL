@@ -9,6 +9,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 import type {
   GamePhase,
   CharacterPublic,
@@ -60,7 +61,7 @@ interface GameStateCtx {
   // Player role
   playerRole: PlayerRole | null;
   isGhostMode: boolean;
-  nightActionRequired: { actionType: string; targets: NightActionTarget[] } | null;
+  nightActionRequired: { actionType: string; targets: NightActionTarget[]; allies?: Array<{ id: string; name: string; avatar_seed: string }> } | null;
   investigationResult: { name: string; faction: string } | null;
   revealedCharacters: Array<{
     id: string; name: string; hidden_role: string; faction: string;
@@ -120,6 +121,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
   const [isGhostMode, setIsGhostMode] = useState(false);
   const [nightActionRequired, setNightActionRequired] = useState<{
     actionType: string; targets: NightActionTarget[];
+    allies?: Array<{ id: string; name: string; avatar_seed: string }>;
   } | null>(null);
   const [investigationResult, setInvestigationResult] = useState<{
     name: string; faction: string;
@@ -142,6 +144,9 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
 
   const streamRef = useRef<AbortController | null>(null);
   const pendingDiscussionEndRef = useRef(false);
+  // Ref to access current session inside stable callbacks (handleStreamEvent has [] deps)
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   // ── Session recovery from localStorage ────────────────────────────
   const STORAGE_KEY = "council_session_id";
@@ -279,14 +284,16 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
 
       case "stream_delta":
         // Append delta to the streaming message
-        setChatMessages((prev) => {
-          const idx = prev.findLastIndex(
-            (m) => m.characterId === event.character_id && m.isStreaming
-          );
-          if (idx === -1) return prev;
-          const updated = [...prev];
-          updated[idx] = { ...updated[idx], content: updated[idx].content + (event.delta || "") };
-          return updated;
+        flushSync(() => {
+          setChatMessages((prev) => {
+            const idx = prev.findLastIndex(
+              (m) => m.characterId === event.character_id && m.isStreaming
+            );
+            if (idx === -1) return prev;
+            const updated = [...prev];
+            updated[idx] = { ...updated[idx], content: updated[idx].content + (event.delta || "") };
+            return updated;
+          });
         });
         break;
 
@@ -475,6 +482,27 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         }
         break;
 
+      case "night_kill_reveal":
+        // Show CharacterReveal card for a character killed at night
+        if (event.character_id) {
+          setRevealedCharacter({
+            id: event.character_id,
+            name: event.character_name || "",
+            hidden_role: event.hidden_role || "",
+            faction: event.faction || "",
+            win_condition: event.win_condition || "",
+            hidden_knowledge: event.hidden_knowledge || [],
+            behavioral_rules: event.behavioral_rules || [],
+            persona: event.persona || "",
+            speaking_style: "",
+            avatar_seed: event.avatar_seed || "",
+            public_role: event.public_role || "",
+            voice_id: "",
+            is_eliminated: true,
+          });
+        }
+        break;
+
       case "voting_started":
         setPhase("voting");
         setHasVoted(false);
@@ -515,8 +543,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         break;
 
       case "elimination":
-        // Character eliminated - update session state
-        setRevealedCharacter(null);
+        // Character eliminated - update session state, then show CharacterReveal
         if (event.character_id) {
           setSession((prev) => {
             if (!prev) return prev;
@@ -544,6 +571,39 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
           },
         ]);
         setPhase("reveal");
+        // Fetch full character reveal data and show CharacterReveal card
+        if (event.character_id && event.character_id !== "player") {
+          const sid = sessionRef.current?.session_id;
+          if (sid) {
+            api.getCharacterReveal(sid, event.character_id)
+              .then(revealData => {
+                const char = sessionRef.current?.characters.find(c => c.id === event.character_id);
+                setRevealedCharacter({
+                  ...(char as CharacterPublic),
+                  ...revealData,
+                  is_eliminated: true,
+                });
+              })
+              .catch(() => {
+                // Fallback: use data from the event itself
+                setRevealedCharacter({
+                  id: event.character_id!,
+                  name: event.character_name || "",
+                  hidden_role: event.hidden_role || "",
+                  faction: event.faction || "",
+                  win_condition: "",
+                  hidden_knowledge: [],
+                  behavioral_rules: [],
+                  persona: "",
+                  speaking_style: "",
+                  avatar_seed: "",
+                  public_role: "",
+                  voice_id: "",
+                  is_eliminated: true,
+                });
+              });
+          }
+        }
         break;
 
       case "night_action_prompt":
@@ -552,12 +612,15 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
           setNightActionRequired({
             actionType: event.action_type,
             targets: event.eligible_targets,
+            allies: event.allies,
           });
+          const allyNames = event.allies?.map(a => a.name).join(", ");
+          const allyMsg = allyNames ? ` Your allies: ${allyNames}.` : "";
           setChatMessages((prev) => [
             ...prev,
             {
               role: "system",
-              content: `Night falls. You may perform your action: ${event.action_type}. Select your target below.`,
+              content: `Night falls. You may perform your action: ${event.action_type}. Select your target below.${allyMsg}`,
             },
           ]);
         }
@@ -830,16 +893,34 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
 
   const dismissReveal = useCallback(() => {
     setRevealedCharacter(null);
-    // Auto-trigger night phase if game hasn't ended
-    if (session && !gameEnd) {
-      setIsChatStreaming(true);
-      const controller = api.streamGameNight(
-        session.session_id,
-        handleStreamEvent
-      );
-      streamRef.current = controller;
+  }, []);
+
+  // Auto-trigger night phase after a delay when conditions are met:
+  // - phase is "night" (set by vote stream narration or done event)
+  // - no CharacterReveal blocking (user dismissed the elimination reveal)
+  // - not already streaming
+  // - no pending night action (player doesn't need to choose a target)
+  // - game hasn't ended
+  useEffect(() => {
+    if (
+      phase === "night" &&
+      !revealedCharacter &&
+      !isChatStreaming &&
+      !nightActionRequired &&
+      session &&
+      !gameEnd
+    ) {
+      const timer = setTimeout(() => {
+        setIsChatStreaming(true);
+        const controller = api.streamGameNight(
+          session.session_id,
+          handleStreamEvent
+        );
+        streamRef.current = controller;
+      }, 3000); // 3s NightOverlay display before triggering night resolution
+      return () => clearTimeout(timer);
     }
-  }, [session, gameEnd, handleStreamEvent]);
+  }, [phase, revealedCharacter, isChatStreaming, nightActionRequired, session, gameEnd, handleStreamEvent]);
 
   const triggerNight = useCallback(() => {
     if (!session || isChatStreaming) return;

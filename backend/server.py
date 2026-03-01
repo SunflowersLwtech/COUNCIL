@@ -135,7 +135,7 @@ async def game_scenarios():
 async def game_create(
     file: UploadFile | None = File(None),
     text: str | None = Form(None),
-    num_characters: int = Form(5, ge=3, le=12),
+    num_characters: int | None = Form(None, ge=3, le=12),
     enabled_skills: str | None = Form(None),
 ):
     """Create a new game session from an uploaded document or text.
@@ -180,7 +180,7 @@ async def game_create(
 @app.post("/api/game/scenario/{scenario_id}")
 async def game_load_scenario(
     scenario_id: str,
-    num_characters: int = Query(5),
+    num_characters: int | None = Query(None, ge=3, le=12),
     enabled_skills: str | None = Query(None),
 ):
     """Create a new game session from a pre-built scenario."""
@@ -355,6 +355,24 @@ async def get_player_role(session_id: str):
         return await orch.get_player_role(session_id)
     except ValueError as e:
         return JSONResponse(status_code=404, content={"error": str(e)})
+
+
+@app.post("/api/game/{session_id}/night-chat")
+async def night_chat(session_id: str, request: GameChatRequest):
+    """Player sends a night whisper to evil allies. AI allies respond via SSE."""
+    orch = _require_orchestrator()
+    async def event_stream():
+        try:
+            async for event in orch.handle_night_chat(session_id, request.message):
+                yield event
+        except asyncio.CancelledError:
+            logger.info("Client disconnected from %s SSE stream", "night-chat")
+            raise
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"}
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=headers)
 
 
 @app.post("/api/game/{session_id}/night-action")

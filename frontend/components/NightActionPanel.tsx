@@ -39,6 +39,7 @@ export default function NightActionPanel() {
 
   const config = ACTION_CONFIG[nightActionRequired.actionType] || ACTION_CONFIG.kill;
   const Icon = config.icon;
+  const allies = nightActionRequired.allies;
 
   return (
     <div className="night-action-panel animate-fade-in-up">
@@ -51,6 +52,19 @@ export default function NightActionPanel() {
           {config.title}
         </h2>
         <p className="night-action-subtitle">{config.subtitle}</p>
+        {allies && allies.length > 0 && (
+          <div style={{
+            marginTop: 8,
+            padding: "6px 12px",
+            borderRadius: 8,
+            background: "rgba(239, 68, 68, 0.1)",
+            border: "1px solid rgba(239, 68, 68, 0.2)",
+            fontSize: 13,
+            color: "#fca5a5",
+          }}>
+            Your allies: {allies.map(a => a.name).join(", ")}
+          </div>
+        )}
       </div>
 
       <div className="night-action-grid">

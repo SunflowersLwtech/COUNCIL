@@ -18,6 +18,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "COUNCIL — AI 社交推理游戏",
   description: "由 Mistral AI 驱动的多角色社交推理体验",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

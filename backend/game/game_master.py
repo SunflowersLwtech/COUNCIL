@@ -29,7 +29,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Complication templates for dynamic event injection
-EARLY_ROUND_THRESHOLD = 3
+EARLY_ROUND_THRESHOLD = 1  # Kills active from round 1 (first night after first discussion)
 
 COMPLICATION_TYPES = {
     "revelation": "New information has come to light — someone's story doesn't add up. A detail from earlier contradicts what was just said.",

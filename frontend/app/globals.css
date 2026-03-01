@@ -845,7 +845,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 110;
   animation: fade-in 0.3s ease-out;
 }
 
@@ -2033,6 +2033,7 @@ button:focus-visible {
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(4px);
+  pointer-events: auto;
 }
 
 .role-card-modal {
@@ -2296,7 +2297,7 @@ button:focus-visible {
 .investigation-reveal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 110;
   background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
@@ -3014,4 +3015,27 @@ button:focus-visible {
 .game-intro-enter-btn {
   margin-top: 0.5rem;
   animation-delay: 0.3s;
+}
+
+/* ── Audio Controls ──────────────────────────────────────────────── */
+
+.audio-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+.audio-toggle-btn:hover {
+  border-color: var(--border-light);
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }

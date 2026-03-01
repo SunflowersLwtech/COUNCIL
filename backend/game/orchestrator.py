@@ -187,7 +187,7 @@ class GameOrchestrator:
     # ── Session creation ──────────────────────────────────────────────
 
     async def create_session_from_file(
-        self, file_bytes: bytes, filename: str, num_characters: int = 7,
+        self, file_bytes: bytes, filename: str, num_characters: int | None = None,
         enabled_skills: list[str] | None = None,
     ) -> GameCreateResponse:
         """Create a game from an uploaded document."""
@@ -195,7 +195,7 @@ class GameOrchestrator:
         return await self._finalize_session(world, num_characters, enabled_skills)
 
     async def create_session_from_text(
-        self, text: str, num_characters: int = 7,
+        self, text: str, num_characters: int | None = None,
         enabled_skills: list[str] | None = None,
     ) -> GameCreateResponse:
         """Create a game from raw text."""
@@ -203,7 +203,7 @@ class GameOrchestrator:
         return await self._finalize_session(world, num_characters, enabled_skills)
 
     async def create_session_from_scenario(
-        self, scenario_id: str, num_characters: int = 7,
+        self, scenario_id: str, num_characters: int | None = None,
         enabled_skills: list[str] | None = None,
     ) -> GameCreateResponse:
         """Create a game from a pre-built scenario."""
@@ -211,11 +211,12 @@ class GameOrchestrator:
         return await self._finalize_session(world, num_characters, enabled_skills)
 
     async def _finalize_session(
-        self, world, num_characters: int,
+        self, world, num_characters: int | None = None,
         enabled_skills: list[str] | None = None,
     ) -> GameCreateResponse:
         """Generate characters, create agents, store session."""
-        characters = await self.char_factory.generate_characters(world, num_characters)
+        count = num_characters if num_characters is not None else world.recommended_player_count
+        characters = await self.char_factory.generate_characters(world, count)
 
         # Resolve skills — use all available skills by default
         skill_ids = enabled_skills if enabled_skills is not None else self.skill_loader.all_skill_ids()
@@ -769,10 +770,8 @@ class GameOrchestrator:
             self._sessions[session_id] = state
             await self._save_session(session_id)
 
-            # Auto-trigger night phase
-            async for night_event in self.handle_night(session_id):
-                yield night_event
-            return
+            # Night phase is now triggered separately by the frontend
+            # (gives time for CharacterReveal overlay + NightOverlay display)
         else:
             if narration:
                 yield f"data: {json.dumps({'type': 'narration', 'content': narration, 'phase': state.phase, 'round': state.round})}\n\n"
@@ -843,16 +842,114 @@ class GameOrchestrator:
         if player_action_type:
             # Emit prompt for player to choose their night action
             eligible_targets = self._get_eligible_night_targets(state)
-            yield f"data: {json.dumps({'type': 'night_action_prompt', 'action_type': player_action_type, 'eligible_targets': eligible_targets})}\n\n"
+            # Include ally info so evil players know their teammates
+            allies = []
+            if state.player_role and state.player_role.allies:
+                for aid in state.player_role.allies:
+                    achar = next((c for c in state.characters if c.id == aid and not c.is_eliminated), None)
+                    if achar:
+                        allies.append({"id": aid, "name": achar.name, "avatar_seed": achar.avatar_seed})
+
+            # Evil players: allies auto-suggest kill targets before player chooses
+            if player_action_type == "kill" and state.player_role:
+                alive = game_state.get_alive_characters(state)
+                for aid in state.player_role.allies:
+                    ally_char = next((c for c in alive if c.id == aid), None)
+                    agent = agents.get(aid)
+                    if not ally_char or not agent:
+                        continue
+                    suggestion_prompt = (
+                        "Night has fallen. Whisper to your allies: "
+                        "who do you think we should eliminate tonight? "
+                        "Base your suggestion on today's discussion. 1-2 sentences only."
+                    )
+                    yield f"data: {json.dumps({'type': 'thinking', 'character_id': ally_char.id, 'character_name': ally_char.name})}\n\n"
+                    yield f"data: {json.dumps({'type': 'stream_start', 'character_id': ally_char.id, 'character_name': ally_char.name})}\n\n"
+                    full = ""
+                    try:
+                        async for chunk in agent.respond_stream(
+                            suggestion_prompt, state.messages,
+                            talk_modifier="[NIGHT WHISPER - ALLIES ONLY] Speak freely about kill strategy."
+                        ):
+                            full += chunk
+                            yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': ally_char.id, 'delta': chunk})}\n\n"
+                            await asyncio.sleep(0)
+                    except Exception:
+                        if not full:
+                            full = agent._get_fallback_response()
+                    response = getattr(agent, '_last_response', None) or full
+                    dominant_emotion = agent.get_dominant_emotion()
+                    tts_text = inject_emotion_tags(response, ally_char.emotional_state)
+                    yield f"data: {json.dumps({'type': 'stream_end', 'character_id': ally_char.id, 'character_name': ally_char.name, 'content': response, 'tts_text': tts_text, 'voice_id': ally_char.voice_id, 'emotion': dominant_emotion})}\n\n"
+                    state.messages.append(ChatMessage(
+                        speaker_id=ally_char.id, speaker_name=ally_char.name,
+                        content=response, is_public=False, phase="night", round=state.round,
+                    ))
+
+            yield f"data: {json.dumps({'type': 'night_action_prompt', 'action_type': player_action_type, 'eligible_targets': eligible_targets, 'allies': allies})}\n\n"
             # Mark state as awaiting player action and return
             state.awaiting_player_night_action = True
             self._sessions[session_id] = state
             await self._save_session(session_id)
+            yield f"data: {json.dumps({'type': 'done', 'phase': 'night'})}\n\n"
             return
 
         # Player has no night action (villager) — resolve immediately
         async for event in self._resolve_night(session_id, player_action=None):
             yield event
+
+    async def handle_night_chat(
+        self, session_id: str, message: str
+    ) -> AsyncGenerator[str, None]:
+        """Handle player chat with evil allies during night. Yields SSE event strings."""
+        state = await self._get_session(session_id)
+        agents = self._get_agents(session_id)
+
+        if state.phase != "night" or not state.awaiting_player_night_action:
+            yield f"data: {json.dumps({'type': 'error', 'error': 'Night chat not available'})}\n\n"
+            return
+
+        # Record player message
+        state.messages.append(ChatMessage(
+            speaker_id="player", speaker_name="You", content=message,
+            is_public=False, phase="night", round=state.round,
+        ))
+
+        # Get alive evil allies to respond
+        alive = game_state.get_alive_characters(state)
+        ally_ids = set(state.player_role.allies) if state.player_role else set()
+        allies = [c for c in alive if c.id in ally_ids]
+
+        for ally in allies:
+            agent = agents.get(ally.id)
+            if not agent:
+                continue
+            yield f"data: {json.dumps({'type': 'thinking', 'character_id': ally.id, 'character_name': ally.name})}\n\n"
+            yield f"data: {json.dumps({'type': 'stream_start', 'character_id': ally.id, 'character_name': ally.name})}\n\n"
+            full = ""
+            try:
+                async for chunk in agent.respond_stream(
+                    message, state.messages,
+                    talk_modifier="[NIGHT WHISPER - ALLIES ONLY] Respond to your ally's message. Discuss kill strategy freely. 1-2 sentences."
+                ):
+                    full += chunk
+                    yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': ally.id, 'delta': chunk})}\n\n"
+                    await asyncio.sleep(0)
+            except Exception:
+                if not full:
+                    full = agent._get_fallback_response()
+            response = getattr(agent, '_last_response', None) or full
+            dominant_emotion = agent.get_dominant_emotion()
+            tts_text = inject_emotion_tags(response, ally.emotional_state)
+            yield f"data: {json.dumps({'type': 'stream_end', 'character_id': ally.id, 'character_name': ally.name, 'content': response, 'tts_text': tts_text, 'voice_id': ally.voice_id, 'emotion': dominant_emotion})}\n\n"
+            state.messages.append(ChatMessage(
+                speaker_id=ally.id, speaker_name=ally.name,
+                content=response, is_public=False, phase="night", round=state.round,
+            ))
+
+        self._sessions[session_id] = state
+        await self._save_session(session_id)
+        yield f"data: {json.dumps({'type': 'done', 'phase': 'night'})}\n\n"
 
     async def handle_player_night_action(
         self, session_id: str, action_type: str, target_character_id: str
@@ -903,6 +1000,15 @@ class GameOrchestrator:
         # Emit night results with narration and eliminated character IDs
         eliminated_ids = [a.target_id for a in state.night_actions if a.result == "killed" and a.target_id]
         yield f"data: {json.dumps({'type': 'night_results', 'narration': narration, 'eliminated_ids': eliminated_ids})}\n\n"
+
+        # Emit night_kill_reveal for each killed NPC so frontend can show CharacterReveal
+        for killed_id in eliminated_ids:
+            if killed_id == "player":
+                continue
+            char = next((c for c in state.characters if c.id == killed_id), None)
+            if char:
+                await asyncio.sleep(3)  # Let dawn narration TTS play first
+                yield f"data: {json.dumps({'type': 'night_kill_reveal', 'character_id': char.id, 'character_name': char.name, 'hidden_role': char.hidden_role, 'faction': char.faction, 'win_condition': char.win_condition, 'hidden_knowledge': char.hidden_knowledge, 'behavioral_rules': char.behavioral_rules, 'persona': char.persona, 'public_role': char.public_role, 'avatar_seed': char.avatar_seed, 'voice_id': getattr(char, 'voice_id', ''), 'is_eliminated': True})}\n\n"
 
         # If player was killed, emit player_eliminated with all hidden info for ghost mode
         if player_killed and state.player_role:

@@ -254,6 +254,49 @@ export function streamGameVote(
   return controller;
 }
 
+export function streamNightChat(
+  sessionId: string,
+  message: string,
+  onEvent: (event: GameStreamEvent) => void
+): AbortController {
+  const controller = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(60000);
+  (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/game/${sessionId}/night-chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+        signal: AbortSignal.any([controller.signal, timeoutSignal]),
+      });
+      if (!res.ok) {
+        onEvent({ type: "error", error: `Night chat failed: ${res.statusText}` });
+        return;
+      }
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop()!;
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try { onEvent(JSON.parse(line.slice(6))); } catch {}
+          }
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        onEvent({ type: "error", error: (err as Error).message });
+      }
+    }
+  })();
+  return controller;
+}
+
 export async function getPlayerRole(sessionId: string): Promise<PlayerRole> {
   const res = await fetch(`${API_BASE}/api/game/${sessionId}/player-role`);
   if (!res.ok) throw new Error(`Failed to get player role: ${res.status} ${res.statusText}`);

@@ -204,4 +204,5 @@ class DocumentEngine:
                 {"name": "Reveal", "duration": "1 minute", "description": "Reveal the eliminated player's true role"},
             ],
             flavor_text="The moon is full tonight. Someone at this table is not who they claim to be...",
+            recommended_player_count=6,
         )

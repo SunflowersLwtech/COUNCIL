@@ -33,6 +33,9 @@ import GhostOverlay, { GhostRoleBadge } from "@/components/GhostOverlay";
 import PhaseTransition from "@/components/PhaseTransition";
 import { seedToColor } from "@/components/CharacterCard";
 import LanguageToggle from "@/components/LanguageToggle";
+import AudioControls from "@/components/audio-controls";
+import { useBackgroundAudio } from "@/hooks/useBackgroundAudio";
+import { useSFX } from "@/hooks/useSFX";
 
 const RoundtableScene = dynamic(
   () =>
@@ -306,6 +309,30 @@ export default function GameBoard() {
     },
   });
 
+  useBackgroundAudio();
+  const sfx = useSFX();
+
+  // SFX: react to phase changes
+  const prevPhaseRef = useRef(game.phase);
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    const next = game.phase;
+    prevPhaseRef.current = next;
+    if (prev === next) return;
+
+    if (next === "discussion" && prev === "intro") {
+      sfx.playGameStart();
+    } else if (next === "voting") {
+      sfx.playPhaseTransition();
+    } else if (next === "reveal") {
+      sfx.playEliminate();
+    } else if (next === "ended") {
+      sfx.playGameEnd();
+    } else if (next === "night") {
+      sfx.playPhaseTransition();
+    }
+  }, [game.phase]);
+
   // Camera follow: driven by chat messages (works even without TTS)
   const speakingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastMsgCountRef = useRef(0);
@@ -447,6 +474,7 @@ export default function GameBoard() {
           <PhaseIndicator phase={game.phase} round={game.round} onTimerExpire={game.endDiscussion} />
           <div style={{ flex: 1 }} />
           <TensionBar tension={game.tension} />
+          <AudioControls />
           <LanguageToggle />
         </div>
 
