@@ -1,4 +1,4 @@
-export type GamePhase = "upload" | "parsing" | "lobby" | "howtoplay" | "discussion" | "voting" | "reveal" | "night" | "ended";
+export type GamePhase = "upload" | "parsing" | "lobby" | "howtoplay" | "intro" | "discussion" | "voting" | "reveal" | "night" | "ended";
 
 export interface CharacterPublic {
   id: string;
@@ -87,6 +87,7 @@ export interface GameStreamEvent {
   content?: string;
   delta?: string;
   voice_id?: string;
+  tts_text?: string;
   phase?: string;
   round?: number;
   tension?: number;

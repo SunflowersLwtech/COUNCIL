@@ -29,6 +29,8 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Complication templates for dynamic event injection
+EARLY_ROUND_THRESHOLD = 3
+
 COMPLICATION_TYPES = {
     "revelation": "New information has come to light — someone's story doesn't add up. A detail from earlier contradicts what was just said.",
     "time_pressure": "Tensions are rising and patience is wearing thin. The council demands decisive action NOW.",
@@ -54,7 +56,7 @@ class GameMaster:
         self._skill_loader = skill_loader
         self.active_skills: list[SkillConfig] = []
         self._narration_injection: str = ""
-        self._discussion_warning_sent: dict[int, bool] = {}  # round -> bool
+        self._discussion_warning_sent: dict[str, dict[int, bool]] = {}  # session_id -> {round -> bool}
         if active_skills:
             self.set_skills(active_skills)
 
@@ -83,7 +85,8 @@ class GameMaster:
         elif current == "discussion":
             state = game_state.advance_to_voting(state)
             narration = await self._generate_narration(state, "voting_start", {})
-            self._discussion_warning_sent.pop(state.round, None)
+            session_warnings = self._discussion_warning_sent.get(state.session_id, {})
+            session_warnings.pop(state.round, None)
         elif current == "voting":
             state = game_state.advance_to_reveal(state)
             narration = ""  # Narration comes after vote tally
@@ -129,8 +132,17 @@ class GameMaster:
         Returns winning faction name or None.
         """
         alive = game_state.get_alive_characters(state)
-        if not alive and not (state.player_role and not state.player_role.is_eliminated):
-            return None
+        player_alive = state.player_role and not state.player_role.is_eliminated
+        if not alive and not player_alive:
+            # All players eliminated — evil wins by default (council destroyed)
+            evil_factions_check = {
+                f.get("name", "")
+                for f in state.world.factions
+                if f.get("alignment", "").lower() == "evil"
+            }
+            if evil_factions_check:
+                return sorted(evil_factions_check)[0]
+            return "draw"
 
         evil_factions = {
             f.get("name", "")
@@ -158,19 +170,19 @@ class GameMaster:
 
         # All evil eliminated -> good wins
         if evil_alive_count == 0 and good_factions:
-            return next(iter(good_factions))
+            return sorted(good_factions)[0]
 
         # Evil > good -> evil wins (majority, not parity)
         if evil_factions and evil_alive_count > good_alive_count:
-            return next(iter(evil_factions))
+            return sorted(evil_factions)[0]
 
         # Round cap: after round 6, resolve by numbers (ties go to good)
         if state.round >= 6:
             if evil_alive_count > good_alive_count:
-                return next(iter(evil_factions))
+                return sorted(evil_factions)[0]
             else:
                 # Tied or good has more — good wins (defender's advantage)
-                return next(iter(good_factions)) if good_factions else None
+                return sorted(good_factions)[0] if good_factions else None
 
         return None
 
@@ -374,7 +386,7 @@ class GameMaster:
             player_action: Optional night action from the human player.
         Returns (updated state, night narration).
         """
-        is_early_round = state.round < 3  # Rounds 1-2: investigation only
+        is_early_round = state.round < EARLY_ROUND_THRESHOLD  # Rounds 1-2: investigation only
 
         alive = game_state.get_alive_characters(state)
         alive_public = [
@@ -517,8 +529,8 @@ class GameMaster:
                         investigation_result = {"name": tc.name, "faction": tc.faction}
 
         # Store investigation result on state for SSE emission
-        state._player_investigation_result = investigation_result  # type: ignore[attr-defined]
-        state._player_killed_at_night = player_killed  # type: ignore[attr-defined]
+        state.player_investigation_result = investigation_result
+        state.player_killed_at_night = player_killed
 
         # Generate night narration
         if is_early_round:
@@ -564,10 +576,12 @@ class GameMaster:
         soft_limit = int(alive_count * self.DISCUSSION_SOFT_LIMIT_PER_PLAYER)
         hard_limit = soft_limit + self.DISCUSSION_HARD_LIMIT_EXTRA
 
-        if total_msgs >= hard_limit and self._discussion_warning_sent.get(state.round, False):
+        session_warnings = self._discussion_warning_sent.setdefault(state.session_id, {})
+
+        if total_msgs >= hard_limit and session_warnings.get(state.round, False):
             return "end"
-        if total_msgs >= soft_limit and not self._discussion_warning_sent.get(state.round, False):
-            self._discussion_warning_sent[state.round] = True
+        if total_msgs >= soft_limit and not session_warnings.get(state.round, False):
+            session_warnings[state.round] = True
             return "warning"
         return None
 
@@ -681,7 +695,7 @@ class GameMaster:
             return True  # Lots of discussion but no one making moves
 
         # Random chance increases with round number
-        if random.random() < 0.1 * state.round:
+        if random.random() < min(0.1 * state.round, 0.5):
             return True
 
         return False

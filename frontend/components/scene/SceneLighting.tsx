@@ -120,15 +120,6 @@ export function SceneLighting({ speakingAgentId, agents, gamePhase = "discussion
         position={[5, 8, 5]}
         intensity={0.5}
         color="#c8d8ff"
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-camera-far={20}
-        shadow-camera-near={1}
-        shadow-camera-left={-6}
-        shadow-camera-right={6}
-        shadow-camera-top={6}
-        shadow-camera-bottom={-6}
       />
 
       {/* Warm overhead fill from table area – phase-reactive */}
@@ -186,7 +177,6 @@ export function SceneLighting({ speakingAgentId, agents, gamePhase = "discussion
         penumbra={0.6}
         intensity={speakingAgentId ? 1.5 : 0.3}
         color="#fff5e6"
-        castShadow
         distance={12}
         decay={2}
       />

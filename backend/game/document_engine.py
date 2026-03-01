@@ -51,6 +51,7 @@ class DocumentEngine:
         if total_chars <= _OCR_DIRECT_LIMIT:
             return await self._extract_world_model(text)
         elif total_chars <= _OCR_CHUNK_THRESHOLD:
+            logger.warning("Document truncated from %d to %d chars", total_chars, _OCR_DIRECT_LIMIT)
             return await self._extract_world_model(text[:_OCR_DIRECT_LIMIT])
         else:
             return await self._hierarchical_extract(text)
@@ -93,21 +94,27 @@ class DocumentEngine:
             ),
             timeout=_MISTRAL_TIMEOUT,
         )
-        signed = await asyncio.wait_for(
-            client.files.get_signed_url_async(file_id=uploaded.id),
-            timeout=_MISTRAL_TIMEOUT,
-        )
-        result = await asyncio.wait_for(
-            client.ocr.process_async(
-                model="mistral-ocr-latest",
-                document={"type": "document_url", "document_url": signed.url},
-            ),
-            timeout=_MISTRAL_TIMEOUT,
-        )
-        pages = []
-        for page in result.pages:
-            pages.append(page.markdown)
-        return "\n\n".join(pages)
+        try:
+            signed = await asyncio.wait_for(
+                client.files.get_signed_url_async(file_id=uploaded.id),
+                timeout=_MISTRAL_TIMEOUT,
+            )
+            result = await asyncio.wait_for(
+                client.ocr.process_async(
+                    model="mistral-ocr-latest",
+                    document={"type": "document_url", "document_url": signed.url},
+                ),
+                timeout=_MISTRAL_TIMEOUT,
+            )
+            pages = []
+            for page in result.pages:
+                pages.append(page.markdown)
+            return "\n\n".join(pages)
+        finally:
+            try:
+                await client.files.delete_async(file_id=uploaded.id)
+            except Exception:
+                logger.warning("Failed to clean up uploaded file %s", uploaded.id)
 
     async def _hierarchical_extract(self, text: str) -> WorldModel:
         """Two-pass extraction for very large documents."""

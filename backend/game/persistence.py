@@ -2,6 +2,7 @@
 
 import os
 import json
+import asyncio
 import logging
 from datetime import datetime
 
@@ -84,8 +85,8 @@ class PersistenceManager:
         except Exception as exc:
             logger.warning("Redis save failed for %s: %s", session_id, exc)
 
-        # Fire-and-forget Supabase sync
-        self._sync_to_supabase(session_id, state_dict)
+        # Fire-and-forget Supabase sync (non-blocking)
+        asyncio.ensure_future(asyncio.to_thread(self._sync_to_supabase, session_id, state_dict))
 
     async def load_game_state(self, session_id: str) -> tuple[dict, dict] | None:
         """Load state + agent memory from Redis. Returns (state_dict, agent_memory) or None."""
@@ -117,9 +118,11 @@ class PersistenceManager:
 
         if self._supabase:
             try:
-                self._supabase.table("game_sessions").update(
-                    {"is_active": False, "updated_at": datetime.utcnow().isoformat()}
-                ).eq("session_id", session_id).execute()
+                await asyncio.to_thread(
+                    lambda: self._supabase.table("game_sessions").update(
+                        {"is_active": False, "updated_at": datetime.utcnow().isoformat()}
+                    ).eq("session_id", session_id).execute()
+                )
             except Exception as exc:
                 logger.warning("Supabase deactivate failed for %s: %s", session_id, exc)
 

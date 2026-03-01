@@ -141,6 +141,15 @@ const en: NestedRecord = {
       lies: "Deception Timeline",
       continue: "Continue",
     },
+    intro: {
+      secretIdentity: "Your Secret Identity",
+      clickToReveal: "Click to reveal your role",
+      faction: "Faction",
+      winCondition: "Win Condition",
+      allies: "Your Allies",
+      enterCouncil: "Enter the Council",
+      skipHint: "Press ESC to skip",
+    },
     end: {
       title: "Game Over",
       winner: "{faction} wins!",
@@ -150,6 +159,7 @@ const en: NestedRecord = {
     phase: {
       upload: "Upload",
       lobby: "Lobby",
+      intro: "Intro",
       discussion: "Discussion",
       voting: "Voting",
       reveal: "Reveal",
@@ -285,6 +295,15 @@ const zh: NestedRecord = {
       lies: "谎言时间线",
       continue: "继续",
     },
+    intro: {
+      secretIdentity: "你的秘密身份",
+      clickToReveal: "点击揭示你的角色",
+      faction: "阵营",
+      winCondition: "胜利条件",
+      allies: "你的盟友",
+      enterCouncil: "进入议会",
+      skipHint: "按 ESC 跳过",
+    },
     end: {
       title: "游戏结束",
       winner: "{faction} 获胜！",
@@ -294,6 +313,7 @@ const zh: NestedRecord = {
     phase: {
       upload: "上传",
       lobby: "大厅",
+      intro: "序幕",
       discussion: "讨论",
       voting: "投票",
       reveal: "揭示",

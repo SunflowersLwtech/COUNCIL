@@ -286,7 +286,7 @@ class PlayerRole(BaseModel):
 
 
 class PlayerNightActionRequest(BaseModel):
-    action_type: str = ""           # "kill", "investigate", "protect"
+    action_type: Literal["kill", "investigate", "protect"] = "investigate"
     target_character_id: str = ""
 
 
@@ -313,6 +313,9 @@ class GameState(BaseModel):
     player_role: PlayerRole | None = None
     # Night phase: waiting for player action before resolving
     awaiting_player_night_action: bool = False
+    # Night phase results for SSE emission
+    player_investigation_result: dict | None = None
+    player_killed_at_night: bool = False
 
 
 class GameCreateResponse(BaseModel):
@@ -324,7 +327,7 @@ class GameCreateResponse(BaseModel):
 
 
 class GameChatRequest(BaseModel):
-    message: str = ""
+    message: str = Field(default="", max_length=2000)
     target_character_id: str | None = None
 
 

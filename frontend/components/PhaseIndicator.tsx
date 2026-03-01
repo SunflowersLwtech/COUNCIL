@@ -7,6 +7,7 @@ import type { GamePhase } from "@/lib/game-types";
 interface PhaseIndicatorProps {
   phase: GamePhase;
   round: number;
+  onTimerExpire?: () => void;
 }
 
 const GAME_PHASES: GamePhase[] = ["discussion", "voting", "reveal", "night"];
@@ -47,21 +48,23 @@ function getChapter(round: number): ChapterInfo {
 /* ── Discussion timer (escalating per round) ──────────────────── */
 
 const DISCUSSION_MINUTES: Record<number, number> = {
-  1: 8, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2,
+  1: 3, 2: 4, 3: 5, 4: 4, 5: 3, 6: 2,
 };
 
 function getTimerMinutes(round: number): number {
   return DISCUSSION_MINUTES[round] ?? 2;
 }
 
-function DiscussionTimer({ round, phase }: { round: number; phase: GamePhase }) {
+function DiscussionTimer({ round, phase, onTimerExpire }: { round: number; phase: GamePhase; onTimerExpire?: () => void }) {
   const totalSeconds = getTimerMinutes(round) * 60;
   const [remaining, setRemaining] = useState(totalSeconds);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasFiredRef = useRef(false);
 
   // Reset when round/phase changes
   useEffect(() => {
     setRemaining(getTimerMinutes(round) * 60);
+    hasFiredRef.current = false;
   }, [round, phase]);
 
   // Tick down during discussion
@@ -78,12 +81,21 @@ function DiscussionTimer({ round, phase }: { round: number; phase: GamePhase }) 
     };
   }, [phase]);
 
+  // Fire onTimerExpire when timer reaches 0 (with 1.5s grace delay)
+  useEffect(() => {
+    if (remaining !== 0 || hasFiredRef.current || phase !== "discussion") return;
+    hasFiredRef.current = true;
+    const graceTimer = setTimeout(() => {
+      onTimerExpire?.();
+    }, 1500);
+    return () => clearTimeout(graceTimer);
+  }, [remaining, phase, onTimerExpire]);
+
   if (phase !== "discussion") return null;
 
   const pct = remaining / totalSeconds;
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
-  const isHard = round >= 3;
 
   // Color shifts green -> yellow -> red
   let timerColor = "#22c55e";
@@ -94,9 +106,9 @@ function DiscussionTimer({ round, phase }: { round: number; phase: GamePhase }) 
   return (
     <div className="discussion-timer" style={{ color: timerColor }}>
       <span className="discussion-timer-value">
-        {minutes}:{seconds.toString().padStart(2, "0")}
+        {remaining === 0 ? "TIME'S UP" : `${minutes}:${seconds.toString().padStart(2, "0")}`}
       </span>
-      {isHard && pct < 0.25 && (
+      {pct < 0.25 && remaining > 0 && (
         <span className="discussion-timer-label" style={{ color: "#ef4444" }}>
           AUTO-VOTE
         </span>
@@ -107,7 +119,7 @@ function DiscussionTimer({ round, phase }: { round: number; phase: GamePhase }) 
 
 /* ── Main Component ───────────────────────────────────────────── */
 
-export default function PhaseIndicator({ phase, round }: PhaseIndicatorProps) {
+export default function PhaseIndicator({ phase, round, onTimerExpire }: PhaseIndicatorProps) {
   const { t } = useI18n();
   const chapter = getChapter(round);
   const currentIndex = GAME_PHASES.indexOf(phase);
@@ -193,7 +205,7 @@ export default function PhaseIndicator({ phase, round }: PhaseIndicatorProps) {
       </div>
 
       {/* Escalating discussion timer */}
-      <DiscussionTimer round={round} phase={phase} />
+      <DiscussionTimer round={round} phase={phase} onTimerExpire={onTimerExpire} />
     </div>
   );
 }

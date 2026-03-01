@@ -30,15 +30,14 @@ export function Table() {
       {/* Tabletop – glass-like holographic surface */}
       <mesh receiveShadow>
         <cylinderGeometry args={[TABLE_RADIUS, TABLE_RADIUS, 0.06, 48]} />
-        <meshPhysicalMaterial
+        <meshStandardMaterial
           color="#0a0a2a"
           emissive="#111133"
           emissiveIntensity={0.2}
           metalness={0.1}
           roughness={0.1}
-          transmission={0.3}
-          thickness={0.5}
           transparent
+          opacity={0.85}
         />
       </mesh>
 

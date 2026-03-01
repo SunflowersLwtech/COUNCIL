@@ -6,6 +6,8 @@ import DocumentUpload from "@/components/DocumentUpload";
 import GameLobby from "@/components/GameLobby";
 import HowToPlay from "@/components/HowToPlay";
 import GameBoard from "@/components/GameBoard";
+import GameIntro from "@/components/GameIntro";
+import StartingOverlay from "@/components/StartingOverlay";
 import CharacterCard, { seedToColor } from "@/components/CharacterCard";
 import LanguageToggle from "@/components/LanguageToggle";
 import { GameStateProvider, useGameState } from "@/hooks/useGameState";
@@ -134,6 +136,11 @@ function GameRouter() {
     );
   }
 
+  // Show starting overlay with progress bar during game initialization
+  if (game.isStarting) {
+    return <StartingOverlay progress={game.startProgress} statusText={game.startStatusText} />;
+  }
+
   // Game board manages its own language toggle in the top bar
   const isGamePhase = ["discussion", "voting", "reveal", "night"].includes(game.phase);
 
@@ -159,6 +166,9 @@ function GameRouter() {
           worldTitle={game.session?.world_title}
         />
       );
+      break;
+    case "intro":
+      content = <GameIntro />;
       break;
     case "discussion":
     case "voting":

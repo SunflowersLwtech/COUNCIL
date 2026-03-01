@@ -46,7 +46,7 @@ export default function HowToPlay({ onStart, worldTitle, factionNames }: HowToPl
     {
       icon: <Shield size={28} style={{ color: "#3b82f6" }} />,
       title: "Your Goal",
-      description: `As a member of the ${good}, find and eliminate the traitors through voting. As a member of the ${evil}, blend in, deceive, and survive until you outnumber the good.`,
+      description: `You will be secretly assigned to a faction. The ${good} must find and eliminate the traitors through voting. The ${evil} must blend in, deceive, and survive until they outnumber the loyal.`,
     },
     {
       icon: <MessageSquare size={24} style={{ color: "#22c55e" }} />,

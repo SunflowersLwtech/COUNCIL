@@ -17,6 +17,7 @@ import {
   ChevronDown,
   MessageCircle,
   Minus,
+  Gavel,
 } from "lucide-react";
 import { useGameState, type GameChatMessage } from "@/hooks/useGameState";
 import { useRoundtable } from "@/hooks/useRoundtable";
@@ -443,7 +444,8 @@ export default function GameBoard() {
       <div className="scene-overlay">
         {/* ── Top Bar ──────────────────────────────────────── */}
         <div className="game-top-bar">
-          <PhaseIndicator phase={game.phase} round={game.round} />
+          <PhaseIndicator phase={game.phase} round={game.round} onTimerExpire={game.endDiscussion} />
+          <div style={{ flex: 1 }} />
           <TensionBar tension={game.tension} />
           <LanguageToggle />
         </div>
@@ -607,6 +609,10 @@ export default function GameBoard() {
                     </button>
                   </div>
                 )}
+                <button className="call-vote-btn" onClick={game.endDiscussion}>
+                  <Gavel size={14} />
+                  <span>Call Vote</span>
+                </button>
                 <div className="scene-input-row">
                   <input
                     type="text"

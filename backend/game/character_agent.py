@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
+import random
 import re
 import asyncio
 from typing import Optional, TYPE_CHECKING
+
 from backend.agents.base_agent import MistralBaseAgent
 from backend.models.game_models import Character, CharacterPublicInfo, ChatMessage, NightAction, WorldModel, Relationship, Memory
 from backend.game.prompts import (
@@ -15,6 +18,8 @@ from backend.game.prompts import (
 
 if TYPE_CHECKING:
     from backend.game.skill_loader import SkillConfig, SkillLoader
+
+logger = logging.getLogger(__name__)
 
 # ── Mistral function-calling tool definitions ────────────────────────
 
@@ -115,6 +120,7 @@ class CharacterAgent(MistralBaseAgent):
         self.system_prompt = self._build_system_prompt()
         self._conversation_history: list[dict] = []
         self._round_memory: list[str] = []
+        self.current_round: int = 0
 
     def _get_injection(self, target: str) -> str:
         """Lazy-load skill injection for a target, with faction filtering and caching."""
@@ -252,8 +258,10 @@ class CharacterAgent(MistralBaseAgent):
             if analysis:
                 self._apply_llm_emotion_analysis(analysis, speaker_id)
                 return
-        except (asyncio.TimeoutError, Exception):
+        except asyncio.TimeoutError:
             pass
+        except Exception as e:
+            logger.warning("Emotion analysis failed for %s: %s", self.character.name, e)
         # Fallback to keyword matching
         self.update_emotions(message, speaker_id)
 
@@ -426,7 +434,7 @@ class CharacterAgent(MistralBaseAgent):
         return None
 
     def _add_memory(self, event: str, mood_effect: dict, narrative: str):
-        mem = Memory(event=event, mood_effect=mood_effect, narrative=narrative, round=0)
+        mem = Memory(event=event, mood_effect=mood_effect, narrative=narrative, round=self.current_round)
         self.character.recent_memories.append(mem)
         if len(self.character.recent_memories) > MAX_RECENT_MEMORIES:
             self.character.recent_memories = self.character.recent_memories[-MAX_RECENT_MEMORIES:]
@@ -516,7 +524,6 @@ class CharacterAgent(MistralBaseAgent):
             f"Let's not lose focus on what really matters here",
             f"I'm not sure what you mean by that",
         ]
-        import random
         return random.choice(fallbacks)
 
     def _humanize(self, text: str) -> str:
@@ -525,9 +532,6 @@ class CharacterAgent(MistralBaseAgent):
         for phrase in AI_PHRASES:
             text = text.replace(phrase, "")
         text = text.strip().lstrip(",").lstrip(";").strip()
-        if text.endswith('.') and len(text) < 100:
-            text = text[:-1]
-        text = text.strip()
         text = self._validate_in_character(text)
         return text
 
@@ -593,7 +597,9 @@ class CharacterAgent(MistralBaseAgent):
                 full_response = self._get_fallback_response()
                 yield full_response
 
-        final = self._humanize(full_response) if full_response else self._get_fallback_response()
+        # Don't re-humanize streamed content (client already has raw text).
+        # Only validate it stays in-character for safety.
+        final = self._validate_in_character(full_response.strip()) if full_response else self._get_fallback_response()
         self._last_response = final
 
         self._conversation_history.append({"role": "user", "content": message})

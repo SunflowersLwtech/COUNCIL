@@ -172,8 +172,7 @@ Recent discussion:
 
 Based on your hidden role and the discussion, who should be eliminated?
 Before casting your vote, briefly state your reasoning (1 sentence) referencing specific statements or behaviors from the discussion.
-You MUST vote for someone other than yourself.
-Return valid JSON: {{"target_id": "id_of_your_choice", "reasoning": "brief internal reasoning (not shared)"}}"""
+You MUST vote for someone other than yourself."""
 
 NARRATION_SYSTEM = """You are the Game Master narrator for a social deduction game called "{world_title}".
 Setting: {setting}

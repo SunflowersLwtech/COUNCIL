@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Stars, Environment } from "@react-three/drei";
+import { Stars } from "@react-three/drei";
 import * as THREE from "three";
 import { SceneLighting } from "./SceneLighting";
 import { Table } from "./Table";
@@ -182,8 +182,8 @@ export function RoundtableCanvas({
     <>
       <SceneLighting speakingAgentId={speakingAgentId} agents={agents} gamePhase={gamePhase} round={round} />
 
-      {/* Environment map for reflections on metallic surfaces */}
-      <Environment preset="night" background={false} />
+      {/* Environment map disabled — HDRI cubemap loading can cause WebGL context loss */}
+      {/* <Environment preset="night" background={false} /> */}
 
       <Table />
       {agents.map((agent) => {
@@ -213,25 +213,15 @@ export function RoundtableCanvas({
         agents={agents}
       />
 
-      {/* Atmosphere – enhanced stars */}
+      {/* Atmosphere – stars (single layer, reduced count for GPU safety) */}
       <Stars
-        radius={20}
-        depth={40}
-        count={2500}
+        radius={18}
+        depth={30}
+        count={1500}
         factor={3}
         saturation={0}
         fade
-        speed={0.5}
-      />
-      {/* Blue accent stars at closer range */}
-      <Stars
-        radius={8}
-        depth={20}
-        count={500}
-        factor={5}
-        saturation={0.8}
-        fade
-        speed={0.3}
+        speed={0.4}
       />
 
       <FloatingParticles count={100} />

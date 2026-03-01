@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  // Disable React Strict Mode — double-mount in dev causes WebGL context loss
+  // because R3F Canvas creates/destroys/recreates GPU resources too fast.
+  reactStrictMode: false,
   transpilePackages: ["three", "@react-three/fiber", "@react-three/drei"],
   async rewrites() {
     return [

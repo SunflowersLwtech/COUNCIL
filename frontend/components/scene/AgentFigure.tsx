@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getSeatPosition } from "@/lib/scene-constants";
@@ -28,7 +28,7 @@ export function AgentFigure({
 
   const pos = getSeatPosition(config.seatIndex, totalSeats);
   const facingAngle = Math.atan2(-pos[0], -pos[2]);
-  const color = new THREE.Color(config.color);
+  const agentColor = useMemo(() => new THREE.Color(config.color), [config.color]);
 
   useFrame((state) => {
     const time = state.clock.elapsedTime;
@@ -219,18 +219,16 @@ export function AgentFigure({
         </mesh>
 
         {/* Head glow halo (visible when speaking) */}
-        {isSpeaking && (
-          <mesh position={[0, 1.0, 0]}>
-            <sphereGeometry args={[0.25, 16, 16]} />
-            <meshBasicMaterial
-              color={config.color}
-              transparent
-              opacity={0.08}
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-            />
-          </mesh>
-        )}
+        <mesh position={[0, 1.0, 0]} visible={isSpeaking}>
+          <sphereGeometry args={[0.25, 16, 16]} />
+          <meshBasicMaterial
+            color={config.color}
+            transparent
+            opacity={0.08}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
 
         {/* Vertical light beam above speaking agent */}
         <mesh

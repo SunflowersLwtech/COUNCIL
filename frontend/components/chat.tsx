@@ -5,7 +5,12 @@ import ReactMarkdown from "react-markdown";
 import AgentAvatar from "./agent-avatar";
 import MicButton from "./mic-button";
 import TTSPlayButton from "./tts-play-button";
-import { sendChatMulti } from "@/lib/api";
+import type { ChatResponse } from "@/lib/api";
+
+// sendChatMulti was removed (dead API endpoint). Stub for legacy component.
+async function sendChatMulti(question: string): Promise<{ responses: ChatResponse[] }> {
+  throw new Error("sendChatMulti is no longer available");
+}
 import { useVoice } from "@/hooks/useVoice";
 import { useI18n } from "@/lib/i18n";
 

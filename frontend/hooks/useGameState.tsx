@@ -37,6 +37,9 @@ export interface GameChatMessage {
 interface GameStateCtx {
   phase: GamePhase;
   isRecovering: boolean;
+  isStarting: boolean;
+  startProgress: number;
+  startStatusText: string;
   session: GameSession | null;
   chatMessages: GameChatMessage[];
   isChatStreaming: boolean;
@@ -51,6 +54,9 @@ interface GameStateCtx {
   round: number;
   tension: number;
   chatTarget: string | null;
+  // Intro
+  introNarration: string | null;
+  completeIntro: () => void;
   // Player role
   playerRole: PlayerRole | null;
   isGhostMode: boolean;
@@ -79,6 +85,7 @@ interface GameStateCtx {
   loadScenarios: () => Promise<void>;
   submitNightAction: (targetId: string) => void;
   dismissInvestigation: () => void;
+  endDiscussion: () => void;
 }
 
 const GameStateContext = createContext<GameStateCtx | null>(null);
@@ -91,6 +98,9 @@ interface GameStateProviderProps {
 export function GameStateProvider({ children, onCharacterResponse }: GameStateProviderProps) {
   const [phase, setPhase] = useState<GamePhase>("upload");
   const [isRecovering, setIsRecovering] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [startProgress, setStartProgress] = useState(0);
+  const [startStatusText, setStartStatusText] = useState("Preparing the council...");
   const [session, setSession] = useState<GameSession | null>(null);
   const [chatMessages, setChatMessages] = useState<GameChatMessage[]>([]);
   const [isChatStreaming, setIsChatStreaming] = useState(false);
@@ -105,6 +115,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
   const [round, setRound] = useState(1);
   const [tension, setTension] = useState(0.2);
   const [chatTarget, setChatTarget] = useState<string | null>(null);
+  const [introNarration, setIntroNarration] = useState<string | null>(null);
   const [playerRole, setPlayerRole] = useState<PlayerRole | null>(null);
   const [isGhostMode, setIsGhostMode] = useState(false);
   const [nightActionRequired, setNightActionRequired] = useState<{
@@ -122,7 +133,15 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     voterName: string; targetName: string; timestamp: number;
   }>>([]);
 
+  // Prune chat messages if they exceed 500
+  useEffect(() => {
+    if (chatMessages.length > 500) {
+      setChatMessages(prev => prev.slice(-400));
+    }
+  }, [chatMessages.length]);
+
   const streamRef = useRef<AbortController | null>(null);
+  const pendingDiscussionEndRef = useRef(false);
 
   // ── Session recovery from localStorage ────────────────────────────
   const STORAGE_KEY = "council_session_id";
@@ -147,7 +166,12 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
           characters: data.characters,
           phase: data.phase,
         });
-        setPhase(data.phase as GamePhase);
+        // If recovered to intro, skip to discussion (backend is already in discussion)
+        if (data.phase === "intro") {
+          setPhase("discussion");
+        } else {
+          setPhase(data.phase as GamePhase);
+        }
         setRound(data.round || 1);
 
         // Restore messages
@@ -349,6 +373,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         break;
 
       case "discussion_ending":
+        pendingDiscussionEndRef.current = false;
         setChatMessages((prev) => [
           ...prev,
           { role: "system", content: event.content || "The council has heard enough. The vote will now begin." },
@@ -425,10 +450,10 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
       case "night_results":
         setChatMessages((prev) => [
           ...prev,
-          { role: "narrator", content: event.content || "Dawn breaks... The results of the night are revealed." },
+          { role: "narrator", content: event.content || event.narration || "Dawn breaks... The results of the night are revealed." },
         ]);
-        if (event.content) {
-          onCharacterResponseRef.current?.(event.content, "Narrator");
+        if (event.content || event.narration) {
+          onCharacterResponseRef.current?.(event.content || event.narration || "", "Narrator");
         }
         // Update eliminated characters from night kills
         {
@@ -505,6 +530,12 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
             };
           });
         }
+        // Update vote results with elimination info
+        setVoteResults(prev => prev ? {
+            ...prev,
+            eliminated_id: event.character_id || null,
+            eliminated_name: event.character_name || null,
+        } : prev);
         setChatMessages((prev) => [
           ...prev,
           {
@@ -579,6 +610,16 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
           if (event.round) setRound(event.round);
         }
         if (event.tension !== undefined) setTension(event.tension);
+        // Execute deferred discussion end (timer/button fired while streaming)
+        if (pendingDiscussionEndRef.current) {
+          pendingDiscussionEndRef.current = false;
+          setChatMessages(prev => [...prev, { role: "system", content: "The council has heard enough. The vote will now begin." }]);
+          setPhase("voting");
+          setHasVoted(false);
+          setVoteResults(null);
+          setSelectedVote(null);
+          setStaggeredVotes([]);
+        }
         break;
     }
   }, []);
@@ -627,27 +668,64 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
   const startGameFn = useCallback(async () => {
     if (!session) return;
     setError(null);
+    setIsStarting(true);
+    setStartProgress(0);
+    setStartStatusText("Preparing the council...");
+
+    // Simulated progress stages while the API call runs
+    const stages = [
+      { pct: 15, text: "Assigning roles..." },
+      { pct: 35, text: "Building world state..." },
+      { pct: 55, text: "Awakening characters..." },
+      { pct: 75, text: "Setting the scene..." },
+      { pct: 90, text: "Almost ready..." },
+    ];
+    let stageIdx = 0;
+    const progressTimer = setInterval(() => {
+      if (stageIdx < stages.length) {
+        setStartProgress(stages[stageIdx].pct);
+        setStartStatusText(stages[stageIdx].text);
+        stageIdx++;
+      }
+    }, 600);
+
     try {
-      await api.startGame(session.session_id);
-      setPhase("discussion");
-      setRound(1);
-      setChatMessages([
-        {
-          role: "narrator",
-          content: "The council is now in session. Speak your mind \u2014 ask questions, make accusations, or defend yourself.",
-        },
-      ]);
-      // Fetch player's hidden role
+      const result = await api.startGame(session.session_id);
+      clearInterval(progressTimer);
+      setStartProgress(100);
+      setStartStatusText("The council awaits...");
+
+      // Fetch player role in parallel with the brief pause
       try {
         const role = await api.getPlayerRole(session.session_id);
         setPlayerRole(role);
       } catch {
-        // Player role is optional — game can still work without it
+        // Player role is optional
       }
+
+      // Brief pause at 100% before transitioning
+      await new Promise((r) => setTimeout(r, 400));
+
+      setRound(result.round || 1);
+      setIntroNarration(result.narration || null);
+      setPhase("intro");
     } catch (err) {
+      clearInterval(progressTimer);
       setError(err instanceof Error ? err.message : "Failed to start game");
+    } finally {
+      setIsStarting(false);
+      setStartProgress(0);
     }
   }, [session]);
+
+  const completeIntro = useCallback(() => {
+    setPhase("discussion");
+    setChatMessages([{
+      role: "narrator",
+      content: introNarration || "The council is now in session. Speak your mind.",
+    }]);
+    setIntroNarration(null);
+  }, [introNarration]);
 
   const showHowToPlay = useCallback(() => {
     if (!session) return;
@@ -726,6 +804,20 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     setInvestigationResult(null);
   }, []);
 
+  const endDiscussion = useCallback(() => {
+    if (phase !== "discussion") return;
+    if (isChatStreaming) {
+      pendingDiscussionEndRef.current = true;
+      return;
+    }
+    setChatMessages(prev => [...prev, { role: "system", content: "The council has heard enough. The vote will now begin." }]);
+    setPhase("voting");
+    setHasVoted(false);
+    setVoteResults(null);
+    setSelectedVote(null);
+    setStaggeredVotes([]);
+  }, [phase, isChatStreaming]);
+
   const dismissReveal = useCallback(() => {
     setRevealedCharacter(null);
     // Auto-trigger night phase if game hasn't ended
@@ -767,6 +859,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     setGameEnd(null);
     setError(null);
     setRound(1);
+    setIntroNarration(null);
     setPlayerRole(null);
     setIsGhostMode(false);
     setNightActionRequired(null);
@@ -789,6 +882,9 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
       value={{
         phase,
         isRecovering,
+        isStarting,
+        startProgress,
+        startStatusText,
         session,
         chatMessages,
         isChatStreaming,
@@ -803,6 +899,8 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         round,
         tension,
         chatTarget,
+        introNarration,
+        completeIntro,
         playerRole,
         isGhostMode,
         nightActionRequired,
@@ -824,6 +922,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         loadScenarios,
         submitNightAction,
         dismissInvestigation,
+        endDiscussion,
       }}
     >
       {children}

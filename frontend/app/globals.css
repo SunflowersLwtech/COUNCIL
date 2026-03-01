@@ -26,10 +26,42 @@
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC",
-    "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Noto Sans SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Noise texture overlay (subtle film grain) ───────────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ── Typography: display headings use Playfair Display ───────────── */
+h1, h2, .welcome-gradient-text, .game-end-title, .phase-transition-title {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+}
+
+/* ── Letter-spacing refinements ──────────────────────────────────── */
+.phase-label,
+.roster-avatar-name,
+.chat-msg-name,
+.input-player-you,
+[style*="text-transform: uppercase"],
+.game-end-stat-label {
+  letter-spacing: 0.08em;
+}
+
+h1, h2, .welcome-gradient-text, .game-end-title {
+  letter-spacing: -0.02em;
 }
 
 /* Smooth transitions for interactive elements */
@@ -837,25 +869,27 @@ button:focus-visible {
 .phase-indicator-container {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .phase-chapter-header {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
 }
 .phase-chapter-round {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .phase-chapter-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: 0.02em;
   text-shadow: 0 0 12px rgba(255, 107, 53, 0.15);
+  white-space: nowrap;
 }
 .phase-chapter-opener {
   font-size: 10px;
@@ -870,11 +904,11 @@ button:focus-visible {
 .discussion-timer {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 4px;
+  margin-top: 1px;
 }
 .discussion-timer-value {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
@@ -894,7 +928,7 @@ button:focus-visible {
 .phase-stepper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .phase-step-group {
   display: flex;
@@ -902,17 +936,17 @@ button:focus-visible {
   align-items: flex-start;
 }
 .phase-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   transition: all 0.3s ease;
   flex-shrink: 0;
 }
 .phase-dot-active {
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2), 0 0 10px rgba(255, 107, 53, 0.5);
-  width: 12px;
-  height: 12px;
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2), 0 0 8px rgba(255, 107, 53, 0.5);
+  width: 10px;
+  height: 10px;
   animation: phase-pulse 2s ease-in-out infinite;
 }
 @keyframes phase-pulse {
@@ -931,7 +965,7 @@ button:focus-visible {
   opacity: 0.4;
 }
 .phase-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.02em;
   transition: color 0.3s ease;
@@ -940,15 +974,10 @@ button:focus-visible {
   text-shadow: 0 0 8px rgba(255, 107, 53, 0.3);
 }
 .phase-subtitle {
-  font-size: 8px;
-  color: var(--text-muted);
-  margin-top: 1px;
-  margin-left: 22px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
+  display: none;
 }
 .phase-connector {
-  width: 20px;
+  width: 14px;
   height: 2px;
   border-radius: 2px;
 }
@@ -957,13 +986,13 @@ button:focus-visible {
 
 .game-top-bar {
   position: absolute;
-  top: 16px;
+  top: 12px;
   left: 16px;
   right: 16px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 16px;
+  gap: 12px;
+  padding: 8px 14px;
   background: linear-gradient(180deg, rgba(14, 14, 28, 0.9) 0%, rgba(10, 10, 22, 0.85) 100%);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1001,7 +1030,7 @@ button:focus-visible {
 
 .left-panel {
   position: absolute;
-  top: 80px;
+  top: 100px;
   left: 16px;
   display: flex;
   flex-direction: column;
@@ -1738,6 +1767,38 @@ button:focus-visible {
 .input-target-clear:hover {
   background: rgba(255, 255, 255, 0.2);
   color: white;
+}
+
+/* ── Call Vote Button ──────────────────────────────────────── */
+
+.call-vote-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 0;
+  margin-bottom: 6px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.12);
+  color: #a78bfa;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.call-vote-btn:hover {
+  background: rgba(139, 92, 246, 0.22);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #c4b5fd;
+}
+
+.call-vote-btn:active {
+  background: rgba(139, 92, 246, 0.3);
+  transform: scale(0.98);
 }
 
 /* ── Game End Screen ────────────────────────────────────────── */
@@ -2677,4 +2738,273 @@ button:focus-visible {
 .character-card:hover::before {
   opacity: 1;
   animation: spin 6s infinite linear;
+}
+
+/* ── Starting Overlay (game loading progress) ─────────────────────── */
+
+.starting-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 6, 18, 0.92);
+  backdrop-filter: blur(12px);
+  animation: fadeIn 0.4s ease;
+}
+
+.starting-overlay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 40px 48px;
+  border-radius: 16px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  min-width: 320px;
+}
+
+.starting-status-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+  letter-spacing: 0.04em;
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.starting-progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.starting-progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  transition: width 0.3s ease;
+  box-shadow: 0 0 8px rgba(255, 107, 53, 0.4);
+}
+
+.starting-progress-pct {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Game Intro ───────────────────────────────────────────────────── */
+
+.game-intro-container {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  cursor: pointer;
+}
+
+.game-intro-bar-top,
+.game-intro-bar-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #000;
+  z-index: 101;
+  animation: letterbox-in 0.8s ease forwards;
+}
+.game-intro-bar-top { top: 0; }
+.game-intro-bar-bottom { bottom: 0; }
+
+/* ── Narration stage ──────────────────────────────────────────────── */
+
+.game-intro-narration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  max-width: 720px;
+  text-align: center;
+  gap: 2rem;
+}
+
+.game-intro-narration-text {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+  line-height: 2;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+  opacity: 0;
+  filter: blur(8px);
+  transform: translateY(10px);
+  transition: opacity 1.2s ease, filter 1.5s ease, transform 1s ease, letter-spacing 1.5s ease;
+}
+
+.game-intro-narration-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
+  letter-spacing: 0.01em;
+}
+
+.game-intro-skip-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0;
+  animation: fade-in 1s ease 2s forwards;
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ── Role reveal stage ────────────────────────────────────────────── */
+
+.game-intro-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.game-intro-reveal-title {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* ── Card flip ────────────────────────────────────────────────────── */
+
+.game-intro-card {
+  width: 280px;
+  height: 380px;
+  perspective: 800px;
+  cursor: pointer;
+}
+
+.game-intro-card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.7s ease;
+  padding: 1.5rem;
+}
+
+.game-intro-card-back {
+  transform: rotateY(0deg);
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+  border: 1px solid var(--border-light);
+}
+
+.game-intro-card-front {
+  transform: rotateY(180deg);
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+  border: 1px solid var(--border-light);
+  justify-content: flex-start;
+  gap: 1.25rem;
+  padding-top: 2rem;
+}
+
+.game-intro-card-flipped .game-intro-card-back {
+  transform: rotateY(-180deg);
+}
+
+.game-intro-card-flipped .game-intro-card-front {
+  transform: rotateY(0deg);
+  animation: reveal-glow 1.5s ease forwards;
+}
+
+.game-intro-card-icon {
+  color: var(--accent);
+  animation: pulse-soft 2s ease-in-out infinite;
+  margin-bottom: 1rem;
+}
+
+.game-intro-card-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ── Role info (card front) ───────────────────────────────────────── */
+
+.game-intro-role-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.game-intro-role-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.game-intro-role-name {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.game-intro-role-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.game-intro-role-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.game-intro-role-label {
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 60px;
+}
+
+.game-intro-role-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ── Enter button ─────────────────────────────────────────────────── */
+
+.game-intro-enter-btn {
+  margin-top: 0.5rem;
+  animation-delay: 0.3s;
 }

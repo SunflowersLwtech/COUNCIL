@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, type ReactNode } from "react";
+import { Component, type ReactNode, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { RoundtableCanvas } from "./RoundtableCanvas";
@@ -74,23 +74,25 @@ class SceneErrorBoundary extends Component<
 }
 
 export default function RoundtableScene(props: RoundtableSceneProps) {
+  const handleCreated = useCallback(({ gl, scene }: { gl: THREE.WebGLRenderer; scene: THREE.Scene }) => {
+    gl.setClearColor("#060612", 1);
+    scene.background = BG_COLOR;
+    scene.fog = new THREE.Fog("#060612", 10, 30);
+  }, []);
+
   return (
     <SceneErrorBoundary>
       <Canvas
         style={{ background: "#060612" }}
         camera={{ position: [0, 1.6, -2.5], fov: 60 }}
-        shadows
         gl={{
-          antialias: true,
+          antialias: false,
           alpha: false,
+          powerPreference: "high-performance",
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.1,
         }}
-        onCreated={({ gl, scene }) => {
-          gl.setClearColor("#060612", 1);
-          scene.background = BG_COLOR;
-          scene.fog = new THREE.Fog("#060612", 10, 30);
-        }}
+        onCreated={handleCreated}
       >
         <RoundtableCanvas
           speakingAgentId={props.speakingAgentId}

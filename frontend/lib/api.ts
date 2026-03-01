@@ -72,94 +72,11 @@ export async function generateTTS(
   }
 }
 
-export interface MultiChatResponse {
-  responses: ChatResponse[];
-}
-
-export async function sendChatMulti(
-  question: string
-): Promise<MultiChatResponse> {
-  const res = await fetch(`${API_BASE}/api/chat/multi`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
-  });
-  if (!res.ok) throw new Error(`Multi-chat failed: ${res.statusText}`);
-  return res.json();
-}
-
-// ── Streaming multi-chat ───────────────────────────────────────────
-
-export interface StreamEvent {
-  type: "agents" | "thinking" | "response" | "error" | "done";
-  agent_id?: string;
-  agent_ids?: string[];
-  agent_role?: string;
-  response?: string;
-  error?: string;
-}
-
-export function streamChatMulti(
-  question: string,
-  onEvent: (event: StreamEvent) => void,
-): AbortController {
-  const controller = new AbortController();
-
-  (async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/chat/multi/stream`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
-        signal: controller.signal,
-      });
-
-      if (!res.ok) {
-        onEvent({ type: "error", error: `Stream failed: ${res.statusText}` });
-        return;
-      }
-
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop()!;
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6)) as StreamEvent;
-              onEvent(data);
-            } catch {
-              // ignore parse errors
-            }
-          }
-        }
-      }
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") {
-        onEvent({
-          type: "error",
-          error: err instanceof Error ? err.message : "Stream connection failed",
-        });
-      }
-    }
-  })();
-
-  return controller;
-}
-
 // ── Game API ────────────────────────────────────────────────────────
 
 export async function getGameScenarios(): Promise<ScenarioInfo[]> {
   const res = await fetch(`${API_BASE}/api/game/scenarios`);
-  if (!res.ok) throw new Error("Failed to load scenarios");
+  if (!res.ok) throw new Error(`Failed to load scenarios: ${res.status} ${res.statusText}`);
   const data = await res.json();
   return data.scenarios || data;
 }
@@ -168,7 +85,7 @@ export async function createGameFromDocument(file: File): Promise<GameSession> {
   const formData = new FormData();
   formData.append("file", file);
   const res = await fetch(`${API_BASE}/api/game/create`, { method: "POST", body: formData });
-  if (!res.ok) throw new Error("Failed to create game");
+  if (!res.ok) throw new Error(`Failed to create game: ${res.status} ${res.statusText}`);
   return res.json();
 }
 
@@ -179,25 +96,33 @@ export async function createGameFromText(text: string): Promise<GameSession> {
     method: "POST",
     body: formData,
   });
-  if (!res.ok) throw new Error("Failed to create game");
+  if (!res.ok) throw new Error(`Failed to create game: ${res.status} ${res.statusText}`);
   return res.json();
 }
 
 export async function loadScenario(scenarioId: string): Promise<GameSession> {
   const res = await fetch(`${API_BASE}/api/game/scenario/${scenarioId}`, { method: "POST" });
-  if (!res.ok) throw new Error("Failed to load scenario");
+  if (!res.ok) throw new Error(`Failed to load scenario: ${res.status} ${res.statusText}`);
   return res.json();
 }
 
-export async function startGame(sessionId: string): Promise<void> {
+export interface StartGameResponse {
+  phase: string;
+  round: number;
+  narration: string;
+  has_player_role: boolean;
+}
+
+export async function startGame(sessionId: string): Promise<StartGameResponse> {
   const res = await fetch(`${API_BASE}/api/game/${sessionId}/start`, { method: "POST" });
-  if (!res.ok) throw new Error("Failed to start game");
+  if (!res.ok) throw new Error(`Failed to start game: ${res.status} ${res.statusText}`);
+  return res.json();
 }
 
 export async function getGameState(sessionId: string, full: boolean = false): Promise<any> {
   const params = full ? "?full=true" : "";
   const res = await fetch(`${API_BASE}/api/game/${sessionId}/state${params}`);
-  if (!res.ok) throw new Error("Failed to get game state");
+  if (!res.ok) throw new Error(`Failed to get game state: ${res.status} ${res.statusText}`);
   return res.json();
 }
 
@@ -208,13 +133,14 @@ export function streamGameChat(
   onEvent: (event: GameStreamEvent) => void
 ): AbortController {
   const controller = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(60000);
   (async () => {
     try {
       const res = await fetch(`${API_BASE}/api/game/${sessionId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, target_character_id: targetCharId }),
-        signal: controller.signal,
+        signal: AbortSignal.any([controller.signal, timeoutSignal]),
       });
       if (!res.ok) {
         onEvent({ type: "error", error: `Chat failed: ${res.statusText}` });
@@ -250,13 +176,14 @@ export function streamGameVote(
   onEvent: (event: GameStreamEvent) => void
 ): AbortController {
   const controller = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(60000);
   (async () => {
     try {
       const res = await fetch(`${API_BASE}/api/game/${sessionId}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target_character_id: targetCharId }),
-        signal: controller.signal,
+        signal: AbortSignal.any([controller.signal, timeoutSignal]),
       });
       if (!res.ok) {
         onEvent({ type: "error", error: `Vote failed: ${res.statusText}` });
@@ -288,7 +215,7 @@ export function streamGameVote(
 
 export async function getPlayerRole(sessionId: string): Promise<PlayerRole> {
   const res = await fetch(`${API_BASE}/api/game/${sessionId}/player-role`);
-  if (!res.ok) throw new Error("Failed to get player role");
+  if (!res.ok) throw new Error(`Failed to get player role: ${res.status} ${res.statusText}`);
   return res.json();
 }
 
@@ -299,13 +226,14 @@ export function streamPlayerNightAction(
   onEvent: (event: GameStreamEvent) => void
 ): AbortController {
   const controller = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(60000);
   (async () => {
     try {
       const res = await fetch(`${API_BASE}/api/game/${sessionId}/night-action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action_type: actionType, target_character_id: targetId }),
-        signal: controller.signal,
+        signal: AbortSignal.any([controller.signal, timeoutSignal]),
       });
       if (!res.ok) {
         onEvent({ type: "error", error: `Night action failed: ${res.statusText}` });
@@ -337,7 +265,7 @@ export function streamPlayerNightAction(
 
 export async function getCharacterReveal(sessionId: string, charId: string): Promise<CharacterRevealed> {
   const res = await fetch(`${API_BASE}/api/game/${sessionId}/reveal/${charId}`);
-  if (!res.ok) throw new Error("Failed to get reveal");
+  if (!res.ok) throw new Error(`Failed to get reveal: ${res.status} ${res.statusText}`);
   return res.json();
 }
 
@@ -346,11 +274,12 @@ export function streamGameNight(
   onEvent: (event: GameStreamEvent) => void
 ): AbortController {
   const controller = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(60000);
   (async () => {
     try {
       const res = await fetch(`${API_BASE}/api/game/${sessionId}/night`, {
         method: "POST",
-        signal: controller.signal,
+        signal: AbortSignal.any([controller.signal, timeoutSignal]),
       });
       if (!res.ok) {
         onEvent({ type: "error", error: `Night failed: ${res.statusText}` });

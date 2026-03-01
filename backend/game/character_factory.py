@@ -3,6 +3,7 @@
 import asyncio
 import os
 import json
+import random
 import uuid
 import logging
 from mistralai import Mistral
@@ -182,8 +183,7 @@ class CharacterFactory:
             return characters
 
         # Pick a random non-special good character
-        import random as _random
-        target = _random.choice(candidates)
+        target = random.choice(candidates)
         target.hidden_role = "Doctor"
         target.hidden_knowledge = [
             f"You are the Doctor of the {target.faction}.",

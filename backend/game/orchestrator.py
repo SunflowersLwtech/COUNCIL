@@ -13,7 +13,7 @@ from backend.models.game_models import (
 from backend.game.document_engine import DocumentEngine
 from backend.game.character_factory import CharacterFactory
 from backend.game.character_agent import CharacterAgent
-from backend.game.game_master import GameMaster
+from backend.game.game_master import GameMaster, EARLY_ROUND_THRESHOLD
 from backend.game.skill_loader import SkillLoader, SkillConfig
 from backend.game import state as game_state
 from backend.game.persistence import PersistenceManager
@@ -162,7 +162,7 @@ class GameOrchestrator:
             ally_details = []
             for aid in pr.allies:
                 achar = next((c for c in state.characters if c.id == aid), None)
-                if achar:
+                if achar and not achar.is_eliminated:
                     ally_details.append({"id": aid, "name": achar.name})
             result["player_role"] = {
                 "hidden_role": pr.hidden_role,
@@ -430,14 +430,18 @@ class GameOrchestrator:
 
         yield f"data: {json.dumps({'type': 'responders', 'character_ids': responder_ids})}\n\n"
 
-        # Update emotions on all alive characters based on player message (LLM-enhanced)
+        # Update emotions on all alive characters (fire-and-forget to avoid blocking SSE stream)
         emotion_tasks = []
         for char in game_state.get_alive_characters(state):
             agent = agents.get(char.id)
             if agent:
                 emotion_tasks.append(agent.update_emotions_llm(message, "player"))
         if emotion_tasks:
-            await asyncio.gather(*emotion_tasks, return_exceptions=True)
+            task = asyncio.ensure_future(
+                asyncio.gather(*emotion_tasks, return_exceptions=True)
+            )
+            self._bg_tasks.add(task)
+            task.add_done_callback(self._bg_tasks.discard)
 
         for i, char_id in enumerate(responder_ids):
             agent = agents.get(char_id)
@@ -462,6 +466,7 @@ class GameOrchestrator:
                     async for chunk in agent.respond_stream(message, state.messages, talk_modifier=talk_modifier):
                         full_response += chunk
                         yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': char_id, 'delta': chunk})}\n\n"
+                        await asyncio.sleep(0)  # yield control so ASGI flushes each SSE event
                 except Exception:
                     if not full_response:
                         full_response = agent._get_fallback_response()
@@ -489,7 +494,15 @@ class GameOrchestrator:
                         asyncio.gather(*ai_emotion_tasks, return_exceptions=True)
                     )
                     self._bg_tasks.add(task)
-                    task.add_done_callback(self._bg_tasks.discard)
+
+                    def _bg_task_done(t: asyncio.Task):
+                        self._bg_tasks.discard(t)
+                        if not t.cancelled():
+                            exc = t.exception()
+                            if exc:
+                                logger.warning("Background emotion task failed: %s", exc)
+
+                    task.add_done_callback(_bg_task_done)
 
                 # Emit stream_end with complete data for TTS
                 tts_text = inject_emotion_tags(response, char.emotional_state)
@@ -518,6 +531,14 @@ class GameOrchestrator:
                 try:
                     reaction = await reactor_agent.react(state.messages)
                     if reaction:
+                        # Stream reaction via stream_start/delta/end so frontend renders it progressively
+                        yield f"data: {json.dumps({'type': 'stream_start', 'character_id': reactor.id, 'character_name': reactor.name})}\n\n"
+                        # Emit the text in small word-groups for a streaming effect
+                        words = reaction.split(" ")
+                        for wi, word in enumerate(words):
+                            chunk = word if wi == 0 else " " + word
+                            yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': reactor.id, 'delta': chunk})}\n\n"
+                            await asyncio.sleep(0.03)
                         react_msg = ChatMessage(
                             speaker_id=reactor.id,
                             speaker_name=reactor.name,
@@ -529,7 +550,7 @@ class GameOrchestrator:
                         state.messages.append(react_msg)
                         tts_reaction = inject_emotion_tags(reaction, reactor.emotional_state)
                         reactor_emotion = reactor_agent.get_dominant_emotion()
-                        yield f"data: {json.dumps({'type': 'reaction', 'character_id': reactor.id, 'character_name': reactor.name, 'content': reaction, 'tts_text': tts_reaction, 'voice_id': reactor.voice_id, 'emotion': reactor_emotion})}\n\n"
+                        yield f"data: {json.dumps({'type': 'stream_end', 'character_id': reactor.id, 'character_name': reactor.name, 'content': reaction, 'tts_text': tts_reaction, 'voice_id': reactor.voice_id, 'emotion': reactor_emotion})}\n\n"
                 except Exception:
                     pass
 
@@ -700,7 +721,7 @@ class GameOrchestrator:
         if not state.player_role or state.player_role.is_eliminated:
             return None
         role = state.player_role.hidden_role.lower()
-        is_early_round = state.round < 3
+        is_early_round = state.round < EARLY_ROUND_THRESHOLD
         evil_factions = {
             f.get("name", "")
             for f in state.world.factions
@@ -802,12 +823,11 @@ class GameOrchestrator:
                 await asyncio.sleep(random.uniform(1.0, 2.5))
 
         # Check if player got an investigation result
-        investigation_result = getattr(state, '_player_investigation_result', None)
-        if investigation_result:
-            yield f"data: {json.dumps({'type': 'investigation_result', 'investigation_result': investigation_result})}\n\n"
+        if state.player_investigation_result:
+            yield f"data: {json.dumps({'type': 'investigation_result', 'investigation_result': state.player_investigation_result})}\n\n"
 
         # Check if player was killed at night
-        player_killed = getattr(state, '_player_killed_at_night', False)
+        player_killed = state.player_killed_at_night
 
         # Emit night results with narration and eliminated character IDs
         eliminated_ids = [a.target_id for a in state.night_actions if a.result == "killed" and a.target_id]

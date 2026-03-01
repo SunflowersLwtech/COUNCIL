@@ -174,7 +174,7 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
         // Close Scribe to release microphone before falling back
         scribeRef.current = null;
         try { scribe.close(); } catch {}
-        console.log("Falling back to Web Speech API...");
+        // Fall back to Web Speech API
         // Delay to allow microphone release
         setTimeout(() => {
           if (!startWebSpeech()) {
@@ -188,7 +188,7 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
         console.error("Scribe auth error:", ev);
         scribeRef.current = null;
         try { scribe.close(); } catch {}
-        console.log("Falling back to Web Speech API...");
+        // Fall back to Web Speech API
         setTimeout(() => {
           if (!startWebSpeech()) {
             showError("Voice authentication failed");

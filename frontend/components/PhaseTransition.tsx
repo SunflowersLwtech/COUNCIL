@@ -31,7 +31,7 @@ export default function PhaseTransition({ phase, round }: PhaseTransitionProps) 
 
   useEffect(() => {
     // Skip non-game phases and initial mount
-    if (phase === "upload" || phase === "parsing" || phase === "lobby" || phase === "howtoplay" || phase === "ended") {
+    if (phase === "upload" || phase === "parsing" || phase === "lobby" || phase === "howtoplay" || phase === "intro" || phase === "ended") {
       prevPhase.current = phase;
       return;
     }
