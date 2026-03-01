@@ -21,13 +21,6 @@ export default function GameIntro() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Auto-advance from narration after 6s
-  useEffect(() => {
-    if (stage !== "narration") return;
-    const timer = setTimeout(() => advanceFromNarration(), 6000);
-    return () => clearTimeout(timer);
-  }, [stage]);
-
   const advanceFromNarration = useCallback(() => {
     if (stage !== "narration") return;
     if (playerRole) {
@@ -79,6 +72,7 @@ export default function GameIntro() {
           <div className={`game-intro-narration-text ${narrationVisible ? "game-intro-narration-visible" : ""}`}>
             {introNarration || "The council has assembled..."}
           </div>
+          <p className="game-intro-continue-hint">{t("game.intro.clickToContinue")}</p>
           <p className="game-intro-skip-hint">{t("game.intro.skipHint")}</p>
         </div>
       )}

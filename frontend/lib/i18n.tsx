@@ -143,6 +143,7 @@ const en: NestedRecord = {
     },
     intro: {
       secretIdentity: "Your Secret Identity",
+      clickToContinue: "Click anywhere to continue",
       clickToReveal: "Click to reveal your role",
       faction: "Faction",
       winCondition: "Win Condition",
@@ -297,6 +298,7 @@ const zh: NestedRecord = {
     },
     intro: {
       secretIdentity: "你的秘密身份",
+      clickToContinue: "点击任意处继续",
       clickToReveal: "点击揭示你的角色",
       faction: "阵营",
       winCondition: "胜利条件",

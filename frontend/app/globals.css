@@ -2865,11 +2865,18 @@ button:focus-visible {
   letter-spacing: 0.01em;
 }
 
+.game-intro-continue-hint {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  opacity: 0;
+  animation: fade-in 1s ease 3s forwards, pulse-soft 2.5s ease-in-out 4s infinite;
+}
+
 .game-intro-skip-hint {
   font-size: 0.75rem;
   color: var(--text-muted);
   opacity: 0;
-  animation: fade-in 1s ease 2s forwards;
+  animation: fade-in 1s ease 4s forwards;
   position: fixed;
   bottom: 80px;
   left: 50%;

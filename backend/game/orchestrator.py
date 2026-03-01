@@ -396,6 +396,81 @@ class GameOrchestrator:
             "has_player_role": state.player_role is not None,
         }
 
+    async def handle_open_discussion(self, session_id: str) -> AsyncGenerator[str, None]:
+        """Trigger opening statements from 3-4 AI characters at the start of discussion. Yields SSE events."""
+        state = await self._get_session(session_id)
+        agents = self._get_agents(session_id)
+
+        if state.phase != "discussion":
+            yield f"data: {json.dumps({'type': 'error', 'error': 'Open discussion only available during discussion phase'})}\n\n"
+            return
+
+        # Skip if discussion already has character messages this round
+        round_character_msgs = [
+            m for m in state.messages
+            if m.round == state.round and m.speaker_id != "player" and m.speaker_id != "narrator" and m.speaker_id != ""
+        ]
+        if round_character_msgs:
+            yield f"data: {json.dumps({'type': 'done', 'tension': state.tension_level})}\n\n"
+            return
+
+        alive = game_state.get_alive_characters(state)
+        # Pick 3-4 characters randomly for opening statements
+        num_speakers = min(len(alive), random.randint(3, 4))
+        speakers = random.sample(alive, num_speakers)
+
+        yield f"data: {json.dumps({'type': 'responders', 'character_ids': [s.id for s in speakers]})}\n\n"
+
+        opening_prompt = (
+            "The council session has just begun. This is the very first moment of discussion — "
+            "no one has spoken yet. Make a brief opening statement (1-3 sentences) to the council. "
+            "You might express suspicion, share an observation, set the tone, or probe others. "
+            "Do NOT reference any previous messages since there are none yet."
+        )
+
+        for i, char in enumerate(speakers):
+            agent = agents.get(char.id)
+            if not agent:
+                continue
+
+            yield f"data: {json.dumps({'type': 'thinking', 'character_id': char.id, 'character_name': char.name})}\n\n"
+
+            try:
+                yield f"data: {json.dumps({'type': 'stream_start', 'character_id': char.id, 'character_name': char.name})}\n\n"
+
+                full_response = ""
+                try:
+                    async for chunk in agent.respond_stream(opening_prompt, state.messages, talk_modifier="Keep your opening brief and impactful."):
+                        full_response += chunk
+                        yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': char.id, 'delta': chunk})}\n\n"
+                        await asyncio.sleep(0)
+                except Exception:
+                    if not full_response:
+                        full_response = agent._get_fallback_response()
+
+                response = getattr(agent, '_last_response', None) or full_response
+
+                ai_msg = ChatMessage(
+                    speaker_id=char.id,
+                    speaker_name=char.name,
+                    content=response,
+                    is_public=True,
+                    phase=state.phase,
+                    round=state.round,
+                )
+                state.messages.append(ai_msg)
+
+                tts_text = inject_emotion_tags(response, char.emotional_state)
+                dominant_emotion = agent.get_dominant_emotion()
+                yield f"data: {json.dumps({'type': 'stream_end', 'character_id': char.id, 'character_name': char.name, 'content': response, 'tts_text': tts_text, 'voice_id': char.voice_id, 'emotion': dominant_emotion})}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'character_id': char.id, 'error': str(e)})}\n\n"
+
+        state = self.game_master.update_tension(state)
+        self._sessions[session_id] = state
+        await self._save_session(session_id)
+        yield f"data: {json.dumps({'type': 'done', 'tension': state.tension_level})}\n\n"
+
     async def handle_chat(
         self, session_id: str, message: str, target_character_id: str | None = None
     ) -> AsyncGenerator[str, None]:
@@ -447,10 +522,6 @@ class GameOrchestrator:
             agent = agents.get(char_id)
             if not agent:
                 continue
-
-            # Staggered timing between responses
-            if i > 0:
-                await asyncio.sleep(random.uniform(1.5, 4.0))
 
             char = agent.character
             yield f"data: {json.dumps({'type': 'thinking', 'character_id': char_id, 'character_name': char.name})}\n\n"

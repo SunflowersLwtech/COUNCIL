@@ -725,7 +725,17 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
       content: introNarration || "The council is now in session. Speak your mind.",
     }]);
     setIntroNarration(null);
-  }, [introNarration]);
+
+    // Auto-trigger opening statements from AI characters
+    if (session) {
+      setIsChatStreaming(true);
+      const controller = api.streamOpenDiscussion(
+        session.session_id,
+        handleStreamEvent
+      );
+      streamRef.current = controller;
+    }
+  }, [introNarration, session, handleStreamEvent]);
 
   const showHowToPlay = useCallback(() => {
     if (!session) return;

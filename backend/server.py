@@ -223,6 +223,24 @@ async def game_start(session_id: str):
         return JSONResponse(status_code=400, content={"error": str(e)})
 
 
+@app.post("/api/game/{session_id}/open-discussion")
+async def game_open_discussion(session_id: str):
+    """Trigger opening statements from AI characters at the start of discussion."""
+    orch = _require_orchestrator()
+    async def event_stream():
+        try:
+            async for event in orch.handle_open_discussion(session_id):
+                yield event
+        except asyncio.CancelledError:
+            logger.info("Client disconnected from %s SSE stream", "open-discussion")
+            raise
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"}
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=headers)
+
+
 @app.post("/api/game/{session_id}/chat")
 async def game_chat(session_id: str, request: GameChatRequest):
     """Player sends a message; AI characters respond via SSE."""
