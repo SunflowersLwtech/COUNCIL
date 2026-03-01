@@ -15,18 +15,21 @@ CLAUDE.md
 .claude/
 .mcp-sidecar/
 
-# ===== Playwright MCP =====
+# ===== Playwright / E2E Test Artifacts =====
+.playwright-mcp/
 playwright-report/
 playwright/.cache/
 test-results/
 playwright-state.json
+e2e/
+tests/e2e/
 
 # ===== Configuration Files =====
 *.ini
 pytest.ini
 .editorconfig
 
-# ===== Images / Media =====
+# ===== Images / Media (global ignore) =====
 *.jpg
 *.jpeg
 *.png
@@ -40,8 +43,17 @@ pytest.ini
 *.raw
 *.heic
 *.heif
-# Allow essential project images (uncomment specific files if needed)
-# !public/logo.png
+
+# ===== Allow project assets =====
+# README diagrams
+!assets/
+!assets/**
+# Frontend icons & PWA assets
+!frontend/public/icon.svg
+!frontend/public/favicon.ico
+!frontend/public/icon-192.png
+!frontend/public/icon-512.png
+!frontend/public/apple-touch-icon.png
 
 # ===== Python =====
 __pycache__/
@@ -73,10 +85,11 @@ dist/
 build/
 *.log
 
-# ===== Test Artifacts / Non-essential Test Files =====
+# ===== Test Artifacts =====
 tests/**/__pycache__/
 e2e/**/__pycache__/
 
 # ===== Non-core Project Artifacts =====
 demo/
 docs/plans/
+.logs/

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/images/hero-banner.svg" alt="COUNCIL — Multi-Agent Reasoning Game" width="100%"/>
+<img src="assets/hero-banner.svg" alt="COUNCIL — Multi-Agent Reasoning Game" width="100%"/>
 
 <br/>
 
@@ -65,7 +65,7 @@ COUNCIL is an AI-powered social deduction game engine that transforms **any docu
 ## ✦ How It Works
 
 <div align="center">
-<img src="docs/images/game-flow.svg" alt="COUNCIL Game Flow" width="100%"/>
+<img src="assets/game-flow.svg" alt="COUNCIL Game Flow" width="100%"/>
 </div>
 
 1. **Upload** — Drag-drop a PDF, paste scenario text, or select a built-in scenario
@@ -81,7 +81,7 @@ COUNCIL is an AI-powered social deduction game engine that transforms **any docu
 ## ✦ System Architecture
 
 <div align="center">
-<img src="docs/images/architecture.svg" alt="COUNCIL System Architecture" width="100%"/>
+<img src="assets/architecture.svg" alt="COUNCIL System Architecture" width="100%"/>
 </div>
 
 | Layer | Technology | Role |
@@ -103,7 +103,7 @@ COUNCIL is an AI-powered social deduction game engine that transforms **any docu
 Mistral AI is the **cognitive backbone** of COUNCIL. Every character thought, strategic decision, and narrative beat is driven by Mistral's language models.
 
 <div align="center">
-<img src="docs/images/mistral-integration.svg" alt="Mistral AI Integration" width="100%"/>
+<img src="assets/mistral-integration.svg" alt="Mistral AI Integration" width="100%"/>
 </div>
 
 ### How Mistral AI Is Used
@@ -161,7 +161,7 @@ Characters are protected against prompt injection and personality drift:
 ElevenLabs brings COUNCIL's characters to life with **real-time voice synthesis** and **speech recognition**, creating a truly immersive conversational experience.
 
 <div align="center">
-<img src="docs/images/voice-pipeline.svg" alt="ElevenLabs Voice Pipeline" width="100%"/>
+<img src="assets/voice-pipeline.svg" alt="ElevenLabs Voice Pipeline" width="100%"/>
 </div>
 
 ### Voice Features
@@ -182,7 +182,7 @@ ElevenLabs transforms COUNCIL from a text-based game into a **cinematic experien
 ## ✦ Multi-Agent System
 
 <div align="center">
-<img src="docs/images/multi-agent.svg" alt="Multi-Agent Character System" width="100%"/>
+<img src="assets/multi-agent.svg" alt="Multi-Agent Character System" width="100%"/>
 </div>
 
 ### What Makes It Different
