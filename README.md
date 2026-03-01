@@ -1,5 +1,7 @@
 <div align="center">
 
+**🌐 [English](README.md) | [Francais](README.fr.md)**
+
 <img src="assets/hero-banner.svg" alt="COUNCIL — Multi-Agent Reasoning Game" width="100%"/>
 
 <br/>
