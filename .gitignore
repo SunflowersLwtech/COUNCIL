@@ -15,6 +15,9 @@ CLAUDE.md
 .claude/
 .mcp-sidecar/
 
+# ===== Screenshots (SVG audit artifacts) =====
+.screenshots/
+
 # ===== Playwright / E2E Test Artifacts =====
 .playwright-mcp/
 playwright-report/
