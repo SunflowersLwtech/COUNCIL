@@ -1,297 +1,353 @@
-# COUNCIL — AI Social Deduction Game
+<div align="center">
 
-![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)
-![Mistral AI](https://img.shields.io/badge/Mistral_AI-FF7000?logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiPjwvc3ZnPg==&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![License MIT](https://img.shields.io/badge/License-MIT-green)
+<img src="docs/images/hero-banner.svg" alt="COUNCIL — Multi-Agent Reasoning Game" width="100%"/>
 
-**COUNCIL** transforms any story, document, or scenario into a fully playable social deduction game powered by Mistral AI. Autonomous characters with distinct personalities debate, deceive, form alliances, and vote to eliminate each other — while you play alongside them as a hidden role.
+<br/>
 
----
+**Turn any story into a living social deduction game. AI characters debate, deceive, and vote. You play among them.**
 
-## Key Features
+<br/>
 
-- **Document-to-Game Engine** — Upload a PDF, paste text, or pick a built-in scenario. Mistral AI generates the world, factions, roles, and win conditions automatically.
-- **Autonomous AI Characters** — Each character has a unique personality (Big Five, MBTI, Sims-style traits), emotional state, relationships, and memory that evolve throughout the game.
-- **Hidden Role Gameplay** — Players receive a secret faction and role (Werewolf, Seer, Doctor, Villager, etc.) with unique night actions and win conditions.
-- **Multi-Phase Game Loop** — Discussion, Voting, Night, and Reveal phases with full AI orchestration and narrative pacing.
-- **Modular Skills System** — YAML-defined cognitive skills (strategic reasoning, deception mastery, memory consolidation) are injected into agent prompts at runtime.
-- **Voice Integration** — ElevenLabs TTS/STT for character speech and player voice input with per-character voice mapping.
-- **Real-Time Streaming** — Server-Sent Events (SSE) stream AI dialogue, votes, and night results to the frontend in real time.
-- **Session Persistence** — Redis (Upstash) stores game state and agent memory for recovery; Supabase for long-term data.
-- **Tension & Pacing** — Dynamic tension tracking triggers game events (complications, revelations, betrayals) to keep sessions engaging.
+[![Mistral AI](https://img.shields.io/badge/Powered_by-Mistral_AI-FA520F?style=for-the-badge&logo=mistralai&logoColor=white)](https://mistral.ai)
+[![ElevenLabs](https://img.shields.io/badge/Voice_by-ElevenLabs-000000?style=for-the-badge&logo=elevenlabs&logoColor=white)](https://elevenlabs.io)
 
----
-
-## Game Flow
-
-1. **Create** — Upload a document, paste story text, or select a built-in scenario. Configure the number of characters and which skills to activate.
-2. **Lobby** — Review the generated world setting, character roster, and your secret role assignment before starting.
-3. **Discussion** — Chat with AI characters who respond in-character with personality-driven dialogue. Characters react spontaneously, form opinions, and track suspicion.
-4. **Voting** — All players (human + AI) cast elimination votes. The character with the most votes is eliminated and their hidden role is revealed.
-5. **Night** — Hidden roles perform faction-specific actions: Werewolves kill, Seers investigate, Doctors protect. The player submits their own night action.
-6. **Repeat** — The game cycles through Discussion, Voting, and Night phases until a faction achieves its win condition.
+[![Python](https://img.shields.io/badge/Python_3.12-3776AB?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js_15-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React_19-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Three.js](https://img.shields.io/badge/Three.js-000000?logo=threedotjs&logoColor=white)](https://threejs.org)
+[![Tailwind](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![Upstash](https://img.shields.io/badge/Upstash-00E9A3?logo=upstash&logoColor=white)](https://upstash.com)
+[![Pydantic](https://img.shields.io/badge/Pydantic_v2-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev)
+[![License MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
 
-## Architecture
+[Features](#-features) · [How It Works](#-how-it-works) · [Architecture](#-system-architecture) · [Mistral AI](#-powered-by-mistral-ai) · [ElevenLabs](#-powered-by-elevenlabs) · [Quick Start](#-quick-start)
+
+</div>
+
+---
+
+## What is COUNCIL?
+
+COUNCIL is an AI-powered social deduction game engine that transforms **any document, story, or scenario** into a fully playable multiplayer experience. Powered by **Mistral AI** for character intelligence and **ElevenLabs** for voice synthesis, the game creates 5-8 autonomous AI characters — each with a unique personality, hidden role, and secret agenda — that debate, deceive, form alliances, and vote to eliminate each other at a 3D virtual roundtable.
+
+**You join as a hidden player.** No one knows your role. Can you survive the council?
+
+### The Magic
+
+> **Upload a PDF** about medieval politics → AI generates a council of lords, merchants, and assassins, each with unique speaking styles and secret goals.
+>
+> **Paste a sci-fi story** → Characters become space station crew members hunting a saboteur among them.
+>
+> **Pick a built-in scenario** → Jump straight into classic social deduction with pre-designed worlds.
+
+---
+
+## ✦ Features
+
+| Feature | Description |
+|---------|-------------|
+| **Document-to-Game Engine** | Upload any PDF or text. Mistral AI extracts the world, factions, roles, and win conditions automatically. |
+| **Autonomous AI Characters** | Each character has a multi-layered personality (Big Five, MBTI, Sims-style traits), emotional state, memory, and relationship tracking that evolves throughout the game. |
+| **Hidden Role Gameplay** | Secret factions (Good vs. Evil), asymmetric night actions (Kill / Investigate / Protect / Poison), and strategic voting. |
+| **Real-Time Voice** | ElevenLabs TTS gives each character a unique voice. Scribe API enables speech-to-text input. Smart audio ducking blends voice with ambient music. |
+| **3D Roundtable** | Immersive Three.js scene with character avatars, dynamic camera following the speaker, and atmospheric lighting. |
+| **Ghost Mode** | Eliminated players become spectators who can see all hidden roles and AI inner thoughts — a window into how AI characters truly reason. |
+| **Modular Skills System** | 7 YAML-defined cognitive modules (Strategic Reasoning, Deception Mastery, Memory Consolidation, etc.) injected into agent prompts at runtime. |
+| **Tension Engine** | Dynamic tension tracking triggers narrative complications — sudden revelations, time pressure, and betrayals — to keep every session unpredictable. |
+| **Streaming Everything** | SSE (Server-Sent Events) streams AI dialogue, votes, and night results word-by-word to the frontend in real time. |
+
+---
+
+## ✦ How It Works
+
+<div align="center">
+<img src="docs/images/game-flow.svg" alt="COUNCIL Game Flow" width="100%"/>
+</div>
+
+1. **Upload** — Drag-drop a PDF, paste scenario text, or select a built-in scenario
+2. **Generate** — Mistral AI extracts the world model and creates 5-8 characters with full personality profiles
+3. **Lobby** — Review the character roster, world setting, and your secret role assignment
+4. **Discussion** — Chat with AI characters who respond in-character. They react spontaneously, track suspicion, and form alliances
+5. **Voting** — All players cast elimination votes. Staggered reveal animation builds suspense. The eliminated character's hidden role is exposed
+6. **Night** — Secret actions: Werewolves kill, Seers investigate, Doctors protect, Witches use potions
+7. **Repeat** — Cycle continues until a faction achieves its win condition
+
+---
+
+## ✦ System Architecture
+
+<div align="center">
+<img src="docs/images/architecture.svg" alt="COUNCIL System Architecture" width="100%"/>
+</div>
+
+| Layer | Technology | Role |
+|-------|-----------|------|
+| **Frontend** | Next.js 15 · React 19 · TypeScript | App shell, UI components, game state management |
+| **3D Engine** | Three.js ~0.175 · React Three Fiber | Roundtable scene, character avatars, camera system |
+| **Styling** | Tailwind CSS 4 | Responsive UI with phase-themed styling |
+| **Backend** | Python 3.12 · FastAPI | REST API, SSE streaming, game orchestration |
+| **LLM** | Mistral AI SDK | Character intelligence, world generation, structured output |
+| **Voice** | ElevenLabs SDK | Text-to-Speech, Speech-to-Text (Scribe API) |
+| **State** | Redis (Upstash) | Session state, agent memory, fast recovery |
+| **Database** | Supabase (PostgreSQL) | Long-term analytics and session storage |
+| **Validation** | Pydantic v2 | LLM response parsing with custom validators |
+
+---
+
+## ✦ Powered by Mistral AI
+
+Mistral AI is the **cognitive backbone** of COUNCIL. Every character thought, strategic decision, and narrative beat is driven by Mistral's language models.
+
+<div align="center">
+<img src="docs/images/mistral-integration.svg" alt="Mistral AI Integration" width="100%"/>
+</div>
+
+### How Mistral AI Is Used
+
+| Stage | Model | What It Does | Key Technique |
+|-------|-------|-------------|---------------|
+| **World Extraction** | Mistral API | Parses uploaded documents into structured world models (setting, factions, roles, win conditions) | JSON mode with Pydantic v2 validation |
+| **Character Generation** | Mistral Large 3 | Creates 5-8 unique characters with multi-dimensional personality traits, hidden roles, and behavioral rules | Structured output with retry logic (~60s) |
+| **Real-Time Dialogue** | Mistral API (streaming) | Each character responds in-character with personality-driven speech patterns, emotional inflection, and strategic intent | SSE streaming with anti-jailbreak filtering |
+| **Strategic Voting** | Mistral API | Characters analyze discussion context, weigh suspicions, and cast votes with strategic justification | Function calling: `cast_vote(target, reason)` |
+| **Night Actions** | Mistral API | Role-based secret actions (kill, investigate, protect) with faction-aware reasoning | Function calling: `night_action(target)` |
+| **Narration** | Mistral API | Game Master generates phase transitions, dramatic flavor text, and complication events | Temperature-controlled creative generation |
+
+### Character Intelligence Layers
+
+Each AI character is constructed as a multi-layered prompt system:
 
 ```
-                   +------------------+
-                   |   Next.js 15     |
-                   |   Frontend       |
-                   |  (React + Three) |
-                   +--------+---------+
-                            |
-                       SSE / REST
-                            |
-                   +--------v---------+
-                   |   FastAPI         |
-                   |   Backend         |
-                   +--------+---------+
-                            |
-          +-----------------+-----------------+
-          |                 |                 |
-  +-------v------+  +------v-------+  +------v-------+
-  |  Game         |  |  Character   |  |  Voice       |
-  |  Orchestrator |  |  Agents      |  |  Middleware   |
-  +-------+------+  +------+-------+  +--------------+
-          |                 |                 |
-  +-------v------+  +------v-------+  +------v-------+
-  |  Game Master  |  |  Skill       |  |  ElevenLabs  |
-  |  (Narration)  |  |  Loader      |  |  TTS / STT   |
-  +--------------+  +--------------+  +--------------+
-          |
-  +-------v------+
-  |  Persistence  |
-  |  Redis +      |
-  |  Supabase     |
-  +--------------+
-          |
-  +-------v------+
-  |  Mistral AI   |
-  |  LLM API      |
-  +--------------+
+┌─────────────────────────────────────────────────────┐
+│  STRATEGIC BRAIN (hidden)                            │
+│  Hidden role · Faction · Win condition · Secret      │
+│  "Never reveal your role. Deflect suspicion."        │
+├─────────────────────────────────────────────────────┤
+│  CHARACTER HEART (public persona)                    │
+│  Name · Speaking style · Want · Method · Morals      │
+│  "A suspicious merchant who speaks in riddles"       │
+├─────────────────────────────────────────────────────┤
+│  PERSONALITY DNA                                     │
+│  Big Five · MBTI · Sims Traits (25-pt budget)        │
+│  Leary's Four Thought Planes (bio/emo/mental/social) │
+├─────────────────────────────────────────────────────┤
+│  EMOTIONAL STATE          │  MEMORY                  │
+│  Happiness · Anger · Fear │  10 recent events        │
+│  Trust · Energy · Curiosity│  8 round summaries      │
+├───────────────────────────┴──────────────────────────┤
+│  RELATIONSHIPS                                       │
+│  Per-character: closeness (0-1) · trust (-1 to 1)    │
+├─────────────────────────────────────────────────────┤
+│  + SKILL INJECTIONS (7 YAML cognitive modules)       │
+└─────────────────────────────────────────────────────┘
 ```
 
----
+### Anti-Jailbreak Protection
 
-## Tech Stack
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| LLM | Mistral AI SDK | Character dialogue, world generation, structured output |
-| Backend | Python 3.12 + FastAPI | REST API, SSE streaming, game orchestration |
-| Frontend | Next.js 15 + React 19 | Game UI, 3D scene rendering |
-| 3D Rendering | Three.js + React Three Fiber | Character avatars and scene visualization |
-| Styling | Tailwind CSS 4 | UI styling |
-| Voice | ElevenLabs | Text-to-Speech, Speech-to-Text |
-| Structured Output | Pydantic v2 | LLM response validation and type safety |
-| Persistence | Redis (Upstash) | Game state and agent memory caching |
-| Database | Supabase | Long-term session and analytics storage |
-| Streaming | Server-Sent Events | Real-time game event delivery |
+Characters are protected against prompt injection and personality drift:
+- Behavioral rules enforced at the prompt level
+- Output filtering strips AI-like phrases ("As an AI", "I cannot")
+- Canon fact tracking prevents self-contradiction
+- Emotional state constraints keep responses within character
 
 ---
 
-## Quick Start
+## ✦ Powered by ElevenLabs
+
+ElevenLabs brings COUNCIL's characters to life with **real-time voice synthesis** and **speech recognition**, creating a truly immersive conversational experience.
+
+<div align="center">
+<img src="docs/images/voice-pipeline.svg" alt="ElevenLabs Voice Pipeline" width="100%"/>
+</div>
+
+### Voice Features
+
+| Feature | Implementation | Details |
+|---------|---------------|---------|
+| **Text-to-Speech** | ElevenLabs TTS Streaming API | Each character is mapped to a unique voice. Dialogue is synthesized in real-time as SSE chunks arrive. Emotion tags (`<happy>`, `<angry>`, `<fearful>`) modulate voice delivery. |
+| **Speech-to-Text** | ElevenLabs Scribe API | Real-time transcription via WebSocket. Single-use tokens minted per session. Partial transcripts display as the player speaks. Graceful fallback to browser Web Speech API. |
+| **Voice Queue** | Custom queue system | Multi-agent TTS plays sequentially. When one character finishes speaking, the next begins. Blob fallback ensures playback even under network instability. |
+| **Audio Ducking** | Custom event system | Background music automatically fades (0.25 → 0.05) when a character speaks. 500ms fade transitions with 20ms steps. Custom `DUCK_EVENT` / `UNDUCK_EVENT` system. Phase-aware volume: night (0.15) vs. discussion (0.25). |
+
+### Why ElevenLabs?
+
+ElevenLabs transforms COUNCIL from a text-based game into a **cinematic experience**. Each AI character has a distinct voice identity — you don't just read their words, you *hear* them argue, accuse, and defend themselves. Combined with the Scribe API for player voice input, conversations feel natural and immersive. The smart audio ducking system ensures that background music and character voices blend seamlessly, with phase-aware volume levels that shift between the tension of night and the energy of open discussion.
+
+---
+
+## ✦ Multi-Agent System
+
+<div align="center">
+<img src="docs/images/multi-agent.svg" alt="Multi-Agent Character System" width="100%"/>
+</div>
+
+### What Makes It Different
+
+Unlike simple chatbot roleplay, COUNCIL implements a **true multi-agent system** where each character:
+
+- **Independently reasons** about the game state with its own hidden information
+- **Maintains persistent memory** across rounds (recent events, round summaries, canon facts)
+- **Tracks relationships** with every other character (closeness, trust, narrative)
+- **Evolves emotionally** — fear rises when accused, trust drops after betrayal, curiosity spikes at revelations
+- **Reacts spontaneously** — 25% chance per message for unprompted NPC responses, creating organic group dynamics
+- **Strategizes privately** — hidden voting logic and night action reasoning are invisible to other agents
+
+### Modular Skills System
+
+7 YAML-defined cognitive modules can be toggled per game session:
+
+| Skill | What It Adds |
+|-------|-------------|
+| **Strategic Reasoning** | Enhanced voting logic, contradiction detection, alliance prediction |
+| **Deception Mastery** | Lie detection, subtle misdirection, trust manipulation techniques |
+| **Memory Consolidation** | Long-term pattern recognition, cross-round consistency tracking |
+| **Social Evaluation** | Relationship analysis, social network mapping, influence prediction |
+| **Goal-Driven Behavior** | Personal wants/methods override generic responses |
+| **Discussion Dynamics** | Turn-taking awareness, interruption patterns, pacing cues |
+| **Contrastive Examples** | In-context learning from past game states for improved reasoning |
+
+---
+
+## ✦ Quick Start
 
 ### Prerequisites
 
 - [Conda](https://docs.conda.io/en/latest/) (Miniconda or Anaconda)
 - [Node.js](https://nodejs.org/) 18+
-- API keys: [Mistral AI](https://console.mistral.ai/), [ElevenLabs](https://elevenlabs.io/) (optional for voice)
+- [Mistral AI API key](https://console.mistral.ai/) (required)
+- [ElevenLabs API key](https://elevenlabs.io/) (optional — for voice features)
 
-### 1. Clone the repository
+### 1. Clone & set up environment
 
 ```bash
 git clone https://github.com/your-username/COUNCIL.git
 cd COUNCIL
-```
 
-### 2. Set up the conda environment
-
-```bash
 conda create -n council python=3.12 -y
 conda activate council
 ```
 
-### 3. Install backend dependencies
+### 2. Install dependencies
 
 ```bash
+# Backend
 pip install -r requirements.txt
+
+# Frontend
+cd frontend && npm install && cd ..
 ```
 
-### 4. Install frontend dependencies
-
-```bash
-cd frontend
-npm install
-cd ..
-```
-
-### 5. Configure environment variables
+### 3. Configure API keys
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your API keys:
+Edit `.env`:
 
 ```env
 MISTRAL_API_KEY=your_mistral_api_key
-ELEVENLABS_API_KEY=your_elevenlabs_api_key   # optional
+ELEVENLABS_API_KEY=your_elevenlabs_api_key    # optional
+UPSTASH_REDIS_URL=your_redis_url              # optional
 SUPABASE_URL=https://your-project.supabase.co # optional
 SUPABASE_ANON_KEY=your_key                    # optional
 ```
 
-### 6. Run the application
-
-**Terminal 1 — Backend:**
+### 4. Run
 
 ```bash
+# Terminal 1 — Backend
 conda activate council
 python run.py
-```
 
-**Terminal 2 — Frontend:**
-
-```bash
+# Terminal 2 — Frontend
 cd frontend
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to start playing.
+Open **[http://localhost:3000](http://localhost:3000)** and start playing.
 
 ---
 
-## API Endpoints
+## ✦ API Reference
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/health` | GET | Health check |
-| `/api/skills` | GET | List available agent skills |
-| `/api/game/scenarios` | GET | List built-in scenarios |
 | `/api/game/create` | POST | Create game from uploaded file or pasted text |
 | `/api/game/scenario/{id}` | POST | Create game from a built-in scenario |
-| `/api/game/{id}/start` | POST | Transition from lobby to discussion phase |
-| `/api/game/{id}/state` | GET | Fetch current game state (public or full) |
-| `/api/game/{id}/chat` | POST | Send message; AI characters respond via SSE |
-| `/api/game/{id}/vote` | POST | Cast vote; streams voting results via SSE |
-| `/api/game/{id}/night` | POST | Trigger night phase; streams night actions via SSE |
+| `/api/game/{id}/start` | POST | Transition from lobby → discussion |
+| `/api/game/{id}/chat` | POST | Send message; AI characters respond via SSE stream |
+| `/api/game/{id}/vote` | POST | Cast vote; streams staggered voting results |
+| `/api/game/{id}/night` | POST | Trigger night phase; streams night action results |
+| `/api/game/{id}/night-action` | POST | Submit player's secret night action |
+| `/api/game/{id}/state` | GET | Fetch current game state |
 | `/api/game/{id}/player-role` | GET | Get the player's hidden role |
-| `/api/game/{id}/night-action` | POST | Submit player night action |
 | `/api/game/{id}/reveal/{char}` | GET | Get eliminated character's hidden role |
 | `/api/voice/tts` | POST | Generate character TTS audio |
 | `/api/voice/tts/stream` | POST | Stream TTS audio in chunks |
-| `/api/voice/sfx` | POST | Generate sound effects |
-| `/api/voice/scribe-token` | POST | Mint single-use STT token |
+| `/api/voice/scribe-token` | POST | Mint single-use STT session token |
+| `/api/skills` | GET | List available cognitive skill modules |
+| `/api/game/scenarios` | GET | List built-in game scenarios |
 
 ---
 
-## Project Structure
+## ✦ Project Structure
 
 ```
 COUNCIL/
 ├── backend/
-│   ├── server.py                 # FastAPI app and all API routes
+│   ├── server.py                 # FastAPI app — all API routes
 │   ├── game/
-│   │   ├── orchestrator.py       # Session management and phase coordination
-│   │   ├── game_master.py        # Narrative generation and tension pacing
-│   │   ├── character_agent.py    # Personality-driven AI character engine
+│   │   ├── orchestrator.py       # Session management, phase coordination
+│   │   ├── game_master.py        # Narrative generation, tension pacing
+│   │   ├── character_agent.py    # Multi-layered AI character engine
 │   │   ├── character_factory.py  # LLM-powered character generation
-│   │   ├── document_engine.py    # Document/text to world model conversion
+│   │   ├── document_engine.py    # Document → world model conversion
 │   │   ├── skill_loader.py       # YAML skill discovery and injection
 │   │   ├── persistence.py        # Redis + Supabase state persistence
 │   │   ├── state.py              # State helpers and serialization
-│   │   ├── prompts.py            # Prompt templates for LLM calls
-│   │   ├── adversarial_tester.py # Automated gameplay testing
-│   │   └── skills/               # YAML skill definitions
-│   │       ├── strategic_reasoning.yaml
-│   │       ├── deception_mastery.yaml
-│   │       ├── memory_consolidation.yaml
-│   │       ├── social_evaluation.yaml
-│   │       ├── goal_driven_behavior.yaml
-│   │       ├── discussion_dynamics.yaml
-│   │       └── contrastive_examples.yaml
+│   │   ├── prompts.py            # Prompt templates for all LLM calls
+│   │   └── skills/               # 7 YAML cognitive skill definitions
 │   ├── agents/
 │   │   └── base_agent.py         # Mistral agent base class
 │   ├── models/
 │   │   └── game_models.py        # Pydantic v2 data models
 │   └── voice/
-│       └── tts_middleware.py     # ElevenLabs TTS/STT integration
+│       └── tts_middleware.py      # ElevenLabs TTS/STT integration
 ├── frontend/
-│   ├── app/                      # Next.js App Router (layout, page)
+│   ├── app/                      # Next.js App Router
 │   ├── components/               # React UI components
-│   │   ├── GameBoard.tsx         # Main game interface
-│   │   ├── chat.tsx              # Chat panel
-│   │   ├── VotePanel.tsx         # Voting interface
-│   │   ├── NightActionPanel.tsx  # Night action selection
-│   │   ├── PlayerRoleCard.tsx    # Player's secret role display
-│   │   ├── CharacterCard.tsx     # Character info cards
-│   │   ├── CharacterReveal.tsx   # Elimination reveal animation
-│   │   ├── DocumentUpload.tsx    # File/text upload form
-│   │   ├── GameLobby.tsx         # Pre-game lobby
-│   │   ├── GhostOverlay.tsx      # Eliminated player ghost effect
-│   │   ├── PhaseIndicator.tsx    # Current phase display
-│   │   └── scene/                # Three.js 3D scene components
-│   ├── hooks/                    # React hooks (game state, voice)
-│   └── lib/                      # API client and utilities
-├── tests/                        # Unit and integration tests
-├── e2e/                          # End-to-end tests
-├── docs/                         # Documentation
+│   │   ├── GameBoard.tsx         # Main game interface (3D + overlays)
+│   │   ├── VotePanel.tsx         # Staggered vote reveal animation
+│   │   ├── NightActionPanel.tsx  # Role-specific night action UI
+│   │   ├── GhostOverlay.tsx      # Eliminated player spectating view
+│   │   ├── PhaseIndicator.tsx    # Round tracker + tension bar
+│   │   └── scene/                # Three.js 3D roundtable components
+│   ├── hooks/                    # useGameState, useVoice, useBackgroundAudio
+│   └── lib/                      # API client, types, utilities
 ├── run.py                        # Backend server launcher
-├── requirements.txt              # Python dependencies
-└── .env.example                  # Environment variable template
+└── requirements.txt              # Python dependencies
 ```
 
 ---
 
-## Skills System
-
-COUNCIL uses a modular **Skills System** to enhance AI character behavior. Skills are defined as YAML files in `backend/game/skills/` and are injected into agent prompts at runtime.
-
-Each skill specifies:
-- **Targets** — Which prompt contexts to inject into (e.g., `character_agent`, `vote_prompt`, `night_action`)
-- **Priority** — Execution order (lower = earlier)
-- **Injections** — Prompt fragments appended to agent system prompts
-- **Dependencies / Conflicts** — Skill compatibility rules
-
-Available skills include: Strategic Reasoning, Deception Mastery, Memory Consolidation, Social Evaluation, Goal-Driven Behavior, Discussion Dynamics, and Contrastive Examples.
-
-Skills can be toggled per game session via the `enabled_skills` parameter when creating a game.
-
----
-
-## Testing
-
-```bash
-conda activate council
-pytest -q
-```
-
----
-
-## Contributing
-
-Contributions are welcome. Please open an issue first to discuss what you would like to change.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add your feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
-
----
-
-## License
+## ✦ License
 
 This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-## Acknowledgments
+<div align="center">
 
-Built for the **Mistral AI Worldwide Hackathon 2026**.
+**Built with passion for the [Mistral AI Worldwide Hackathon 2026](https://mistral.ai/)**
 
-Powered by [Mistral AI](https://mistral.ai/) and [ElevenLabs](https://elevenlabs.io/).
+<a href="https://mistral.ai"><img src="https://img.shields.io/badge/Mistral_AI-FA520F?style=for-the-badge&logo=mistralai&logoColor=white" alt="Mistral AI"/></a>
+<a href="https://elevenlabs.io"><img src="https://img.shields.io/badge/ElevenLabs-000000?style=for-the-badge&logo=elevenlabs&logoColor=white" alt="ElevenLabs"/></a>
+<a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase"/></a>
+<a href="https://upstash.com"><img src="https://img.shields.io/badge/Upstash-00E9A3?style=for-the-badge&logo=upstash&logoColor=white" alt="Upstash"/></a>
+
+</div>

@@ -16,12 +16,20 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "COUNCIL — AI 社交推理游戏",
-  description: "由 Mistral AI 驱动的多角色社交推理体验",
+  title: "COUNCIL — Multi-Agent Reasoning Game",
+  description:
+    "An AI-powered social deduction game where autonomous characters debate, deceive, and vote. Powered by Mistral AI.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
     shortcut: "/favicon.ico",
     apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.webmanifest",
+  other: {
+    "theme-color": "#12122a",
   },
 };
 
@@ -31,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" className={`dark ${playfair.variable} ${inter.variable}`}>
+    <html lang="en" className={`dark ${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen antialiased">{children}</body>
     </html>
   );
