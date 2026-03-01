@@ -7,7 +7,7 @@
 <br/>
 
 **Every civilization, every story, every conflict — strip it down and you find the same structure: good against evil, a savior, a killer, and the crowd in between.**
-**COUNCIL is that structure, alive. Feed it any document and it builds a world of autonomous AI agents with hidden agendas, evolving memories, and competing loyalties. You infiltrate as one of them — and they don't know you're human.**
+**COUNCIL is that structure, alive. Feed it any document and it spawns a network of multi-agent AI characters that observe, communicate, and conspire with each other — each carrying hidden agendas, evolving memories, and shifting loyalties. You infiltrate as one of them — and they don't know you're human.**
 
 <br/>
 

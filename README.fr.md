@@ -7,7 +7,7 @@
 <br/>
 
 **Chaque civilisation, chaque histoire, chaque conflit — reduisez-le a sa structure et vous trouvez toujours la meme chose : le bien contre le mal, un sauveur, un tueur, et la foule entre les deux.**
-**COUNCIL est cette structure, vivante. Donnez-lui n'importe quel document et il construit un monde d'agents IA autonomes avec des objectifs caches, des memoires evolutives et des loyautes concurrentes. Vous vous infiltrez parmi eux — et ils ne savent pas que vous etes humain.**
+**COUNCIL est cette structure, vivante. Donnez-lui n'importe quel document et il fait emerger un reseau de personnages IA multi-agents qui s'observent, communiquent et conspirent entre eux — chacun portant des objectifs caches, des memoires evolutives et des loyautes mouvantes. Vous vous infiltrez parmi eux — et ils ne savent pas que vous etes humain.**
 
 <br/>
 
