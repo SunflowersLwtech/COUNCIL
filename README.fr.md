@@ -6,11 +6,12 @@
 
 <br/>
 
-**Transformez n'importe quelle histoire en un jeu de deduction sociale vivant.**
-**Des personnages IA debattent, trompent, se souviennent et votent — vous jouez parmi eux, et ils ne savent pas que vous etes humain.**
+**Chaque civilisation, chaque histoire, chaque conflit — reduisez-le a sa structure et vous trouvez toujours la meme chose : le bien contre le mal, un sauveur, un tueur, et la foule entre les deux.**
+**COUNCIL est cette structure, vivante. Donnez-lui n'importe quel document et il construit un monde d'agents IA autonomes avec des objectifs caches, des memoires evolutives et des loyautes concurrentes. Vous vous infiltrez parmi eux — et ils ne savent pas que vous etes humain.**
 
 <br/>
 
+[![Voir la demo](https://img.shields.io/badge/Voir_la_demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/RHimBYrIWE8)
 [![Mistral AI](https://img.shields.io/badge/Powered_by-Mistral_AI-FA520F?style=for-the-badge&logo=mistralai&logoColor=white)](https://mistral.ai)
 [![ElevenLabs](https://img.shields.io/badge/Voice_by-ElevenLabs-000000?style=for-the-badge&logo=elevenlabs&logoColor=white)](https://elevenlabs.io)
 

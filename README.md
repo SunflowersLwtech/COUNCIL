@@ -6,11 +6,12 @@
 
 <br/>
 
-**Turn any story into a living social deduction game.**
-**AI characters debate, deceive, remember, and vote — you play among them, and they don't know you're human.**
+**Every civilization, every story, every conflict — strip it down and you find the same structure: good against evil, a savior, a killer, and the crowd in between.**
+**COUNCIL is that structure, alive. Feed it any document and it builds a world of autonomous AI agents with hidden agendas, evolving memories, and competing loyalties. You infiltrate as one of them — and they don't know you're human.**
 
 <br/>
 
+[![Watch Demo](https://img.shields.io/badge/Watch_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/RHimBYrIWE8)
 [![Mistral AI](https://img.shields.io/badge/Powered_by-Mistral_AI-FA520F?style=for-the-badge&logo=mistralai&logoColor=white)](https://mistral.ai)
 [![ElevenLabs](https://img.shields.io/badge/Voice_by-ElevenLabs-000000?style=for-the-badge&logo=elevenlabs&logoColor=white)](https://elevenlabs.io)
 
