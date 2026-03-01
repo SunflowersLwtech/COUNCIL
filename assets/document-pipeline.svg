@@ -92,7 +92,7 @@
 
 <!-- Personality Layers Detail -->
 <text x="40" y="240" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="14" font-weight="700">Character Personality Layers</text>
-<text x="250" y="240" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10">Each character is a multi-dimensional psychological model</text>
+<text x="280" y="240" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10">Each character is a multi-dimensional psychological model</text>
 
 <rect width="880" height="200" x="40" y="255" fill="#fafafa" stroke="#e2e8f0" stroke-width="1.5" filter="url(#b)" rx="10"/>
 

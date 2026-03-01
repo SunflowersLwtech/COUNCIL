@@ -1,0 +1,254 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 960 380">
+  <defs>
+    <linearGradient id="header" x1="0" x2="960" y1="0" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+    <linearGradient id="meterGrad" x1="0" x2="0" y1="1" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="35%" stop-color="#f59e0b"/>
+      <stop offset="70%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <linearGradient id="meterBg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="curveStroke" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="75%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <filter id="shadow" width="108%" height="108%" x="-4%" y="-4%">
+      <feDropShadow dx="0" dy="2" flood-color="#000" flood-opacity=".08" stdDeviation="4"/>
+    </filter>
+    <filter id="smallShadow" width="110%" height="115%" x="-5%" y="-5%">
+      <feDropShadow dx="0" dy="1" flood-color="#000" flood-opacity=".06" stdDeviation="2"/>
+    </filter>
+    <marker id="arrow" markerHeight="5" markerWidth="7" orient="auto" refX="7" refY="2.5">
+      <path fill="#94a3b8" d="m0 0 7 2.5L0 5Z"/>
+    </marker>
+    <marker id="arrowPurple" markerHeight="5" markerWidth="7" orient="auto" refX="7" refY="2.5">
+      <path fill="#7c3aed" d="m0 0 7 2.5L0 5Z"/>
+    </marker>
+    <marker id="arrowRed" markerHeight="5" markerWidth="7" orient="auto" refX="7" refY="2.5">
+      <path fill="#ef4444" d="m0 0 7 2.5L0 5Z"/>
+    </marker>
+    <marker id="arrowAmber" markerHeight="5" markerWidth="7" orient="auto" refX="7" refY="2.5">
+      <path fill="#f59e0b" d="m0 0 7 2.5L0 5Z"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="380" fill="#fff" rx="12"/>
+
+  <!-- Header bar -->
+  <rect width="960" height="52" fill="url(#header)" rx="12"/>
+  <path fill="url(#header)" d="M0 40h960v12H0z"/>
+  <text x="480" y="33" fill="#fff" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="2" text-anchor="middle">DYNAMIC TENSION ENGINE</text>
+
+  <!-- ===== LEFT SECTION: Tension Meter ===== -->
+  <text x="55" y="82" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600" letter-spacing="1.5">TENSION LEVEL</text>
+
+  <!-- Meter background -->
+  <rect width="44" height="200" x="68" y="96" fill="url(#meterBg)" stroke="#e2e8f0" stroke-width="1.5" rx="22"/>
+
+  <!-- Meter fill (gradient bar) -->
+  <rect width="28" height="180" x="76" y="106" fill="url(#meterGrad)" rx="14" opacity=".85"/>
+
+  <!-- Level labels -->
+  <g font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="600">
+    <text x="125" y="120" fill="#dc2626">CRITICAL</text>
+    <line x1="114" y1="117" x2="120" y2="117" stroke="#dc2626" stroke-width="1"/>
+    <text x="125" y="162" fill="#ef4444">HIGH</text>
+    <line x1="114" y1="159" x2="120" y2="159" stroke="#ef4444" stroke-width="1"/>
+    <text x="125" y="210" fill="#f59e0b">MEDIUM</text>
+    <line x1="114" y1="207" x2="120" y2="207" stroke="#f59e0b" stroke-width="1"/>
+    <text x="125" y="262" fill="#3b82f6">LOW</text>
+    <line x1="114" y1="259" x2="120" y2="259" stroke="#3b82f6" stroke-width="1"/>
+  </g>
+
+  <!-- Level indicator dots -->
+  <circle cx="90" cy="117" r="4" fill="#dc2626" opacity=".9"/>
+  <circle cx="90" cy="159" r="4" fill="#ef4444" opacity=".8"/>
+  <circle cx="90" cy="207" r="4" fill="#f59e0b" opacity=".8"/>
+  <circle cx="90" cy="259" r="4" fill="#3b82f6" opacity=".8"/>
+
+  <!-- Animated pulse ring on current level -->
+  <circle cx="90" cy="117" r="8" fill="none" stroke="#dc2626" stroke-width="1" opacity=".3"/>
+  <circle cx="90" cy="117" r="12" fill="none" stroke="#dc2626" stroke-width=".5" opacity=".15"/>
+
+  <!-- ===== CENTER SECTION: Timeline with tension curve ===== -->
+  <text x="370" y="82" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600" letter-spacing="1.5">TENSION CURVE ACROSS ROUNDS</text>
+
+  <!-- Timeline chart area -->
+  <rect width="380" height="210" x="200" y="90" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" rx="10" filter="url(#shadow)"/>
+
+  <!-- Y-axis labels -->
+  <g fill="#94a3b8" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="8">
+    <text x="212" y="116" text-anchor="end">100</text>
+    <text x="212" y="160" text-anchor="end">75</text>
+    <text x="212" y="204" text-anchor="end">50</text>
+    <text x="212" y="248" text-anchor="end">25</text>
+    <text x="212" y="290" text-anchor="end">0</text>
+  </g>
+
+  <!-- Grid lines -->
+  <g stroke="#e2e8f0" stroke-width=".5">
+    <line x1="220" y1="112" x2="570" y2="112"/>
+    <line x1="220" y1="156" x2="570" y2="156"/>
+    <line x1="220" y1="200" x2="570" y2="200"/>
+    <line x1="220" y1="244" x2="570" y2="244"/>
+    <line x1="220" y1="288" x2="570" y2="288"/>
+  </g>
+
+  <!-- Round labels -->
+  <g fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="600" text-anchor="middle">
+    <text x="262" y="283">R1</text>
+    <text x="320" y="283">R2</text>
+    <text x="378" y="283">R3</text>
+    <text x="436" y="283">R4</text>
+    <text x="494" y="283">R5</text>
+    <text x="552" y="283">R6</text>
+  </g>
+
+  <!-- Vertical round separators -->
+  <g stroke="#e2e8f0" stroke-dasharray="3,3" stroke-width=".5">
+    <line x1="262" y1="108" x2="262" y2="275"/>
+    <line x1="320" y1="108" x2="320" y2="275"/>
+    <line x1="378" y1="108" x2="378" y2="275"/>
+    <line x1="436" y1="108" x2="436" y2="275"/>
+    <line x1="494" y1="108" x2="494" y2="275"/>
+    <line x1="552" y1="108" x2="552" y2="275"/>
+  </g>
+
+  <!-- Tension curve (rising with fluctuations) -->
+  <path stroke="url(#curveStroke)" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M240 268 Q262 255 280 245 Q300 232 320 220 Q345 200 360 195 Q378 185 395 165 Q415 145 436 138 Q460 128 480 120 Q494 115 510 112 Q535 108 555 105" fill="none"/>
+
+  <!-- Area fill under curve -->
+  <path d="M240 268 Q262 255 280 245 Q300 232 320 220 Q345 200 360 195 Q378 185 395 165 Q415 145 436 138 Q460 128 480 120 Q494 115 510 112 Q535 108 555 105 V275 H240 Z" fill="url(#curveStroke)" opacity=".06"/>
+
+  <!-- Trigger points (where complications fire) -->
+  <!-- Trigger 1: Round 2 -->
+  <circle cx="320" cy="220" r="6" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+  <circle cx="320" cy="220" r="2.5" fill="#f59e0b"/>
+
+  <!-- Trigger 2: Round 3 -->
+  <circle cx="378" cy="185" r="6" fill="#fff" stroke="#ef4444" stroke-width="2"/>
+  <circle cx="378" cy="185" r="2.5" fill="#ef4444"/>
+
+  <!-- Trigger 3: Round 5 -->
+  <circle cx="494" cy="115" r="6" fill="#fff" stroke="#dc2626" stroke-width="2"/>
+  <circle cx="494" cy="115" r="2.5" fill="#dc2626"/>
+
+  <!-- Trigger labels -->
+  <g font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7" font-weight="500" fill="#64748b">
+    <text x="320" y="213" text-anchor="middle">trigger</text>
+    <text x="378" y="178" text-anchor="middle">trigger</text>
+    <text x="494" y="108" text-anchor="middle">trigger</text>
+  </g>
+
+  <!-- Connecting arrows from triggers to complication cards -->
+  <path stroke="#f59e0b" stroke-dasharray="4,3" stroke-width="1.2" marker-end="url(#arrowAmber)" d="M326 226 Q380 270 610 148"/>
+  <path stroke="#ef4444" stroke-dasharray="4,3" stroke-width="1.2" marker-end="url(#arrowRed)" d="M384 190 Q440 230 610 193"/>
+  <path stroke="#7c3aed" stroke-dasharray="4,3" stroke-width="1.2" marker-end="url(#arrowPurple)" d="M500 118 Q540 115 610 108"/>
+
+  <!-- ===== RIGHT SECTION: Complication Cards ===== -->
+  <text x="730" y="82" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600" letter-spacing="1.5">COMPLICATIONS</text>
+
+  <!-- Card 1: Revelation (purple) -->
+  <g transform="translate(620 92)">
+    <rect width="155" height="38" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.2" rx="8" filter="url(#smallShadow)"/>
+    <rect width="26" height="26" x="6" y="6" fill="#7c3aed" rx="6"/>
+    <!-- Magnifying glass icon -->
+    <g transform="translate(11 11)" stroke="#fff" stroke-linecap="round" stroke-width="1.5" fill="none">
+      <circle cx="6" cy="6" r="4.5"/>
+      <path d="M9.5 9.5 13 13"/>
+    </g>
+    <text x="40" y="16" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Revelation</text>
+    <text x="40" y="28" fill="#7c3aed" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="8">Hidden info surfaces</text>
+  </g>
+
+  <!-- Card 2: Time Pressure (red) -->
+  <g transform="translate(620 138)">
+    <rect width="155" height="38" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.2" rx="8" filter="url(#smallShadow)"/>
+    <rect width="26" height="26" x="6" y="6" fill="#ef4444" rx="6"/>
+    <!-- Clock icon -->
+    <g transform="translate(11 11)" stroke="#fff" stroke-linecap="round" stroke-width="1.5" fill="none">
+      <circle cx="7" cy="7" r="6"/>
+      <path d="M7 4v3.5l2.5 1.5"/>
+    </g>
+    <text x="40" y="16" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Time Pressure</text>
+    <text x="40" y="28" fill="#ef4444" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="8">Urgency escalation</text>
+  </g>
+
+  <!-- Card 3: Suspicion Shift (amber) -->
+  <g transform="translate(620 184)">
+    <rect width="155" height="38" fill="#fffbeb" stroke="#fcd34d" stroke-width="1.2" rx="8" filter="url(#smallShadow)"/>
+    <rect width="26" height="26" x="6" y="6" fill="#f59e0b" rx="6"/>
+    <!-- Arrows icon (shuffle) -->
+    <g transform="translate(11 11)" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" fill="none">
+      <path d="M2 4h4l4 6H6L2 4zm0 6h4l4-6"/>
+      <path d="M12 4h1l1 1m0 4-1 1h-1"/>
+    </g>
+    <text x="40" y="16" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Suspicion Shift</text>
+    <text x="40" y="28" fill="#f59e0b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="8">Blame redirection</text>
+  </g>
+
+  <!-- Card 4: Alliance Crack (pink) -->
+  <g transform="translate(620 230)">
+    <rect width="155" height="38" fill="#fdf2f8" stroke="#f9a8d4" stroke-width="1.2" rx="8" filter="url(#smallShadow)"/>
+    <rect width="26" height="26" x="6" y="6" fill="#ec4899" rx="6"/>
+    <!-- Broken link icon -->
+    <g transform="translate(11 11)" stroke="#fff" stroke-linecap="round" stroke-width="1.5" fill="none">
+      <path d="M5 9H3a3 3 0 0 1 0-6h2m4 0h2a3 3 0 0 1 0 6h-2"/>
+      <path d="M4 6h6" stroke-dasharray="2,2"/>
+    </g>
+    <text x="40" y="16" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Alliance Crack</text>
+    <text x="40" y="28" fill="#ec4899" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="8">Trust fractures</text>
+  </g>
+
+  <!-- Card 5: Evidence (blue) -->
+  <g transform="translate(620 276)">
+    <rect width="155" height="38" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.2" rx="8" filter="url(#smallShadow)"/>
+    <rect width="26" height="26" x="6" y="6" fill="#3b82f6" rx="6"/>
+    <!-- Document icon -->
+    <g transform="translate(12 11)" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" fill="none">
+      <path d="M9 1H3a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 3 13h7.5A1.5 1.5 0 0 0 12 11.5V4z"/>
+      <path d="M9 1v3h3m-3 3H4.5m6 3H4.5m1.5-6H4.5"/>
+    </g>
+    <text x="40" y="16" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="700">Evidence</text>
+    <text x="40" y="28" fill="#3b82f6" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="8">New clues emerge</text>
+  </g>
+
+  <!-- ===== FOOTER BADGES ===== -->
+  <path stroke="#e2e8f0" d="M40 330h880"/>
+
+  <g transform="translate(220 355)">
+    <rect width="150" height="26" x="-75" y="-13" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="13"/>
+    <!-- Pulse icon -->
+    <g transform="translate(-58 -5)" stroke="#7c3aed" stroke-linecap="round" stroke-width="1.3" fill="none">
+      <path d="M0 5h3l2-4 2 8 2-4h3"/>
+    </g>
+    <text x="4" y="4" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="600" text-anchor="middle">Continuous Tracking</text>
+  </g>
+
+  <g transform="translate(480 355)">
+    <rect width="140" height="26" x="-70" y="-13" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="13"/>
+    <!-- Zap icon -->
+    <g transform="translate(-52 -5)" stroke="#f59e0b" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" fill="none">
+      <path d="M7 0 2 6h5l-1 5 5-6H6z"/>
+    </g>
+    <text x="4" y="4" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="600" text-anchor="middle">Auto-Injection</text>
+  </g>
+
+  <g transform="translate(740 355)">
+    <rect width="170" height="26" x="-85" y="-13" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="13"/>
+    <!-- Layers icon -->
+    <g transform="translate(-68 -5)" stroke="#ef4444" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" fill="none">
+      <path d="m0 4 6 3 6-3-6-3zm0 3 6 3 6-3"/>
+    </g>
+    <text x="4" y="4" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="600" text-anchor="middle">5 Complication Types</text>
+  </g>
+</svg>

@@ -1,0 +1,300 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 960 440">
+  <defs>
+    <linearGradient id="header" x1="0" x2="960" y1="0" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+    <linearGradient id="backendBox" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f5f3ff"/>
+      <stop offset="100%" stop-color="#ede9fe"/>
+    </linearGradient>
+    <linearGradient id="frontendBox" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#eff6ff"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
+    <linearGradient id="streamGrad" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity=".15"/>
+      <stop offset="25%" stop-color="#f59e0b" stop-opacity=".12"/>
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity=".12"/>
+      <stop offset="75%" stop-color="#94a3b8" stop-opacity=".1"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity=".15"/>
+    </linearGradient>
+    <filter id="shadow" width="108%" height="108%" x="-4%" y="-4%">
+      <feDropShadow dx="0" dy="2" flood-color="#000" flood-opacity=".08" stdDeviation="4"/>
+    </filter>
+    <filter id="smallShadow" width="110%" height="115%" x="-5%" y="-5%">
+      <feDropShadow dx="0" dy="1" flood-color="#000" flood-opacity=".06" stdDeviation="2"/>
+    </filter>
+    <marker id="arrow" markerHeight="5" markerWidth="7" orient="auto" refX="7" refY="2.5">
+      <path fill="#94a3b8" d="m0 0 7 2.5L0 5Z"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="440" fill="#fff" rx="12"/>
+
+  <!-- Header bar -->
+  <rect width="960" height="52" fill="url(#header)" rx="12"/>
+  <path fill="url(#header)" d="M0 40h960v12H0z"/>
+  <text x="480" y="28" fill="#fff" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="2" text-anchor="middle">REAL-TIME SSE STREAMING</text>
+  <text x="480" y="44" fill="#c4b5fd" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="400" letter-spacing="1" text-anchor="middle">26 Event Types  ·  Zero Polling  ·  Word-by-Word Delivery</text>
+
+  <!-- ===== LEFT: Backend Box ===== -->
+  <g transform="translate(40 72)">
+    <rect width="220" height="280" fill="url(#backendBox)" stroke="#c4b5fd" stroke-width="1.5" rx="10" filter="url(#shadow)"/>
+    <rect width="80" height="20" x="10" y="8" fill="#7c3aed" rx="4"/>
+    <text x="50" y="21" fill="#fff" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">BACKEND</text>
+
+    <!-- FastAPI logo area -->
+    <rect width="196" height="36" x="12" y="36" fill="#fff" stroke="#ddd6fe" stroke-width="1" rx="6"/>
+    <g transform="translate(22 42)">
+      <circle r="10" cx="10" cy="12" fill="#059669" opacity=".9"/>
+      <path fill="#fff" d="m6 8 8 4-8 4z"/>
+    </g>
+    <text x="48" y="52" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="12" font-weight="700">FastAPI</text>
+    <text x="48" y="64" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="8">Python 3.12 · Async</text>
+
+    <!-- Internal components -->
+    <rect width="196" height="34" x="12" y="82" fill="#fff" stroke="#ddd6fe" stroke-width="1" rx="6"/>
+    <rect width="20" height="20" x="18" y="89" fill="#a78bfa" rx="4"/>
+    <g transform="translate(21 92)" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.2">
+      <path d="M1 7h12M7 1v12"/>
+    </g>
+    <text x="44" y="100" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">Orchestrator</text>
+    <text x="44" y="111" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7">Session + Phase Control</text>
+
+    <rect width="196" height="34" x="12" y="122" fill="#fff" stroke="#ddd6fe" stroke-width="1" rx="6"/>
+    <rect width="20" height="20" x="18" y="129" fill="#a78bfa" rx="4"/>
+    <g transform="translate(22 132)" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.2">
+      <circle cx="6" cy="4" r="3"/>
+      <path d="M0 11a6 6 0 0 1 12 0"/>
+    </g>
+    <text x="44" y="140" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">AI Agents</text>
+    <text x="44" y="151" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7">Mistral-powered reasoning</text>
+
+    <rect width="196" height="34" x="12" y="162" fill="#fff" stroke="#ddd6fe" stroke-width="1" rx="6"/>
+    <rect width="20" height="20" x="18" y="169" fill="#a78bfa" rx="4"/>
+    <g transform="translate(22 172)" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.2">
+      <path d="M1 4h12m-12 4h8"/>
+    </g>
+    <text x="44" y="180" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">SSE Emitter</text>
+    <text x="44" y="191" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7">StreamingResponse</text>
+
+    <rect width="196" height="34" x="12" y="202" fill="#fff" stroke="#ddd6fe" stroke-width="1" rx="6"/>
+    <rect width="20" height="20" x="18" y="209" fill="#a78bfa" rx="4"/>
+    <g transform="translate(22 213)" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.2">
+      <path d="M2 2h10v8H2zm0 4h10"/>
+    </g>
+    <text x="44" y="220" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">Game Master</text>
+    <text x="44" y="231" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7">Narration + Tension</text>
+
+    <!-- "data: {...}" code snippet -->
+    <rect width="196" height="32" x="12" y="244" fill="#1e1b4b" stroke="#4c1d95" stroke-width="1" rx="6"/>
+    <text x="22" y="258" fill="#a78bfa" font-family="'Courier New',monospace" font-size="8">data: </text>
+    <text x="54" y="258" fill="#c4b5fd" font-family="'Courier New',monospace" font-size="8">{"type":"stream_delta",</text>
+    <text x="22" y="269" fill="#c4b5fd" font-family="'Courier New',monospace" font-size="8"> "content":"I think..."}</text>
+  </g>
+
+  <!-- ===== CENTER: Streaming Flow ===== -->
+  <!-- Stream channel -->
+  <rect width="380" height="260" x="290" y="82" fill="#fafafa" stroke="#e2e8f0" stroke-width="1" rx="10" filter="url(#shadow)"/>
+
+  <text x="480" y="100" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="1" text-anchor="middle">EVENT STREAM</text>
+
+  <!-- Stream visual: flowing dots in rows by category -->
+
+  <!-- Category 1: Dialogue (purple) - 8 events -->
+  <g transform="translate(310 115)">
+    <rect width="340" height="46" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1" rx="6"/>
+    <circle cx="14" cy="14" r="5" fill="#7c3aed"/>
+    <text x="25" y="18" fill="#7c3aed" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="700">Dialogue (8)</text>
+
+    <!-- Event tags -->
+    <g font-family="'Courier New',monospace" font-size="7" fill="#5b21b6">
+      <rect width="46" height="14" x="8" y="26" fill="#ede9fe" rx="3"/>
+      <text x="31" y="36" text-anchor="middle">thinking</text>
+      <rect width="58" height="14" x="58" y="26" fill="#ede9fe" rx="3"/>
+      <text x="87" y="36" text-anchor="middle">responders</text>
+      <rect width="52" height="14" x="120" y="26" fill="#ede9fe" rx="3"/>
+      <text x="146" y="36" text-anchor="middle">response</text>
+      <rect width="48" height="14" x="176" y="26" fill="#ede9fe" rx="3"/>
+      <text x="200" y="36" text-anchor="middle">reaction</text>
+      <rect width="70" height="14" x="228" y="26" fill="#ede9fe" rx="3"/>
+      <text x="263" y="36" text-anchor="middle">stream_delta</text>
+    </g>
+    <!-- Flowing dots animation hint -->
+    <circle cx="316" cy="14" r="3" fill="#7c3aed" opacity=".6"/>
+    <circle cx="326" cy="14" r="2.5" fill="#7c3aed" opacity=".4"/>
+    <circle cx="334" cy="14" r="2" fill="#7c3aed" opacity=".2"/>
+  </g>
+
+  <!-- Category 2: Voting (amber) - 5 events -->
+  <g transform="translate(310 168)">
+    <rect width="340" height="46" fill="#fffbeb" stroke="#fcd34d" stroke-width="1" rx="6"/>
+    <circle cx="14" cy="14" r="5" fill="#f59e0b"/>
+    <text x="25" y="18" fill="#b45309" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="700">Voting (5)</text>
+
+    <g font-family="'Courier New',monospace" font-size="7" fill="#92400e">
+      <rect width="82" height="14" x="8" y="26" fill="#fef3c7" rx="3"/>
+      <text x="49" y="36" text-anchor="middle">voting_started</text>
+      <rect width="28" height="14" x="94" y="26" fill="#fef3c7" rx="3"/>
+      <text x="108" y="36" text-anchor="middle">vote</text>
+      <rect width="30" height="14" x="126" y="26" fill="#fef3c7" rx="3"/>
+      <text x="141" y="36" text-anchor="middle">tally</text>
+      <rect width="64" height="14" x="160" y="26" fill="#fef3c7" rx="3"/>
+      <text x="192" y="36" text-anchor="middle">elimination</text>
+      <rect width="98" height="14" x="228" y="26" fill="#fef3c7" rx="3"/>
+      <text x="277" y="36" text-anchor="middle">player_eliminated</text>
+    </g>
+    <circle cx="316" cy="14" r="3" fill="#f59e0b" opacity=".6"/>
+    <circle cx="326" cy="14" r="2.5" fill="#f59e0b" opacity=".4"/>
+    <circle cx="334" cy="14" r="2" fill="#f59e0b" opacity=".2"/>
+  </g>
+
+  <!-- Category 3: Night (blue) - 5 events -->
+  <g transform="translate(310 221)">
+    <rect width="340" height="46" fill="#eff6ff" stroke="#93c5fd" stroke-width="1" rx="6"/>
+    <circle cx="14" cy="14" r="5" fill="#3b82f6"/>
+    <text x="25" y="18" fill="#1d4ed8" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="700">Night (5)</text>
+
+    <g font-family="'Courier New',monospace" font-size="7" fill="#1e40af">
+      <rect width="76" height="14" x="8" y="26" fill="#dbeafe" rx="3"/>
+      <text x="46" y="36" text-anchor="middle">night_started</text>
+      <rect width="70" height="14" x="88" y="26" fill="#dbeafe" rx="3"/>
+      <text x="123" y="36" text-anchor="middle">night_action</text>
+      <rect width="74" height="14" x="162" y="26" fill="#dbeafe" rx="3"/>
+      <text x="199" y="36" text-anchor="middle">night_results</text>
+      <rect width="94" height="14" x="240" y="26" fill="#dbeafe" rx="3"/>
+      <text x="287" y="36" text-anchor="middle">night_kill_reveal</text>
+    </g>
+    <circle cx="316" cy="14" r="3" fill="#3b82f6" opacity=".6"/>
+    <circle cx="326" cy="14" r="2.5" fill="#3b82f6" opacity=".4"/>
+    <circle cx="334" cy="14" r="2" fill="#3b82f6" opacity=".2"/>
+  </g>
+
+  <!-- Category 4: System (gray) - 8 events -->
+  <g transform="translate(310 274)">
+    <rect width="340" height="46" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" rx="6"/>
+    <circle cx="14" cy="14" r="5" fill="#64748b"/>
+    <text x="25" y="18" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="700">System (8)</text>
+
+    <g font-family="'Courier New',monospace" font-size="7" fill="#475569">
+      <rect width="72" height="14" x="8" y="26" fill="#f1f5f9" rx="3"/>
+      <text x="44" y="36" text-anchor="middle">complication</text>
+      <rect width="54" height="14" x="84" y="26" fill="#f1f5f9" rx="3"/>
+      <text x="111" y="36" text-anchor="middle">narration</text>
+      <rect width="58" height="14" x="142" y="26" fill="#f1f5f9" rx="3"/>
+      <text x="171" y="36" text-anchor="middle">game_over</text>
+      <rect width="62" height="14" x="204" y="26" fill="#f1f5f9" rx="3"/>
+      <text x="235" y="36" text-anchor="middle">last_words</text>
+      <rect width="28" height="14" x="270" y="26" fill="#f1f5f9" rx="3"/>
+      <text x="284" y="36" text-anchor="middle">done</text>
+      <rect width="30" height="14" x="302" y="26" fill="#f1f5f9" rx="3"/>
+      <text x="317" y="36" text-anchor="middle">error</text>
+    </g>
+    <circle cx="316" cy="14" r="3" fill="#64748b" opacity=".6"/>
+    <circle cx="326" cy="14" r="2.5" fill="#64748b" opacity=".4"/>
+    <circle cx="334" cy="14" r="2" fill="#64748b" opacity=".2"/>
+  </g>
+
+  <!-- ===== RIGHT: Frontend Box ===== -->
+  <g transform="translate(700 72)">
+    <rect width="220" height="280" fill="url(#frontendBox)" stroke="#93c5fd" stroke-width="1.5" rx="10" filter="url(#shadow)"/>
+    <rect width="82" height="20" x="10" y="8" fill="#3b82f6" rx="4"/>
+    <text x="51" y="21" fill="#fff" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">FRONTEND</text>
+
+    <!-- Next.js -->
+    <rect width="196" height="36" x="12" y="36" fill="#fff" stroke="#bfdbfe" stroke-width="1" rx="6"/>
+    <g transform="translate(22 42)">
+      <circle cx="10" cy="12" r="10" fill="#000"/>
+      <text x="10" y="16" fill="#fff" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="700" text-anchor="middle">N</text>
+    </g>
+    <text x="48" y="52" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="12" font-weight="700">Next.js 15</text>
+    <text x="48" y="64" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="8">App Router · React 19</text>
+
+    <!-- SSE Consumer -->
+    <rect width="196" height="34" x="12" y="82" fill="#fff" stroke="#bfdbfe" stroke-width="1" rx="6"/>
+    <rect width="20" height="20" x="18" y="89" fill="#60a5fa" rx="4"/>
+    <g transform="translate(22 93)" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.2">
+      <path d="M2 2h10v8H2z"/>
+      <path d="M2 6 7 3l5 3"/>
+    </g>
+    <text x="44" y="100" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">SSE Consumer</text>
+    <text x="44" y="111" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7">fetch + reader loop</text>
+
+    <!-- State Manager -->
+    <rect width="196" height="34" x="12" y="122" fill="#fff" stroke="#bfdbfe" stroke-width="1" rx="6"/>
+    <rect width="20" height="20" x="18" y="129" fill="#60a5fa" rx="4"/>
+    <g transform="translate(21 132)" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.2">
+      <path d="M7 1v12m-5-6h10"/>
+    </g>
+    <text x="44" y="140" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">GameStateProvider</text>
+    <text x="44" y="151" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7">React Context + Hooks</text>
+
+    <!-- Chat Component -->
+    <rect width="196" height="34" x="12" y="162" fill="#fff" stroke="#bfdbfe" stroke-width="1" rx="6"/>
+    <rect width="20" height="20" x="18" y="169" fill="#60a5fa" rx="4"/>
+    <g transform="translate(22 172)" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.2">
+      <path d="M2 1h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H5L2 12V2a1 1 0 0 1 1-1"/>
+    </g>
+    <text x="44" y="180" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">ChatDrawer</text>
+    <text x="44" y="191" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7">Word-by-word rendering</text>
+
+    <!-- 3D Scene -->
+    <rect width="196" height="34" x="12" y="202" fill="#fff" stroke="#bfdbfe" stroke-width="1" rx="6"/>
+    <rect width="20" height="20" x="18" y="209" fill="#60a5fa" rx="4"/>
+    <g transform="translate(22 213)" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.2">
+      <path d="M7 1 1 4v6l6 3 6-3V4zm0 0v6m0 0L1 4m6 3 6-3"/>
+    </g>
+    <text x="44" y="220" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">RoundtableScene</text>
+    <text x="44" y="231" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7">Three.js + R3F</text>
+
+    <!-- Real-time indicator -->
+    <rect width="196" height="32" x="12" y="244" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1" rx="6"/>
+    <circle cx="28" cy="260" r="4" fill="#10b981"/>
+    <circle cx="28" cy="260" r="7" fill="none" stroke="#10b981" stroke-width="1" opacity=".4"/>
+    <text x="40" y="263" fill="#065f46" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="600">Connected · 0ms polling</text>
+  </g>
+
+  <!-- ===== CONNECTING ARROWS: Backend → Stream → Frontend ===== -->
+  <!-- Backend to Stream -->
+  <path stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow)" d="M262 212h26" opacity=".6"/>
+  <text x="270" y="208" fill="#7c3aed" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7" font-weight="500" text-anchor="middle">SSE</text>
+
+  <!-- Stream to Frontend -->
+  <path stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow)" d="M672 212h26" opacity=".6"/>
+  <text x="680" y="208" fill="#3b82f6" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="7" font-weight="500" text-anchor="middle">SSE</text>
+
+  <!-- ===== FOOTER: Legend ===== -->
+  <path stroke="#e2e8f0" d="M40 370h880"/>
+
+  <text x="480" y="390" fill="#94a3b8" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9" font-weight="600" letter-spacing="2" text-anchor="middle">EVENT CATEGORIES</text>
+
+  <!-- Legend items -->
+  <g transform="translate(180 410)">
+    <circle cx="0" cy="0" r="5" fill="#7c3aed"/>
+    <text x="10" y="4" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">Dialogue</text>
+    <text x="68" y="4" fill="#94a3b8" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9">(8 events)</text>
+  </g>
+
+  <g transform="translate(340 410)">
+    <circle cx="0" cy="0" r="5" fill="#f59e0b"/>
+    <text x="10" y="4" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">Voting</text>
+    <text x="56" y="4" fill="#94a3b8" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9">(5 events)</text>
+  </g>
+
+  <g transform="translate(490 410)">
+    <circle cx="0" cy="0" r="5" fill="#3b82f6"/>
+    <text x="10" y="4" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">Night</text>
+    <text x="46" y="4" fill="#94a3b8" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9">(5 events)</text>
+  </g>
+
+  <g transform="translate(630 410)">
+    <circle cx="0" cy="0" r="5" fill="#64748b"/>
+    <text x="10" y="4" fill="#475569" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="10" font-weight="600">System</text>
+    <text x="58" y="4" fill="#94a3b8" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="9">(8 events)</text>
+  </g>
+
+  <!-- Bottom credit -->
+  <text x="480" y="434" fill="#cbd5e1" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="8" text-anchor="middle">COUNCIL — Zero-Polling Architecture · All events delivered via Server-Sent Events</text>
+</svg>

@@ -25,7 +25,7 @@
 
 ---
 
-[Features](#-features) · [How It Works](#-how-it-works) · [Document Pipeline](#-document-to-game-pipeline) · [Mistral AI](#-powered-by-mistral-ai) · [ElevenLabs](#-powered-by-elevenlabs) · [Multi-Agent System](#-multi-agent-system) · [Skills Architecture](#-modular-skills-architecture) · [Progressive Disclosure](#-progressive-disclosure-design) · [Architecture](#-system-architecture) · [Quick Start](#-quick-start)
+[The Turing Test Game](#-the-turing-test-game) · [Features](#-features) · [How It Works](#-how-it-works) · [Document Pipeline](#-document-to-game-pipeline) · [Mistral AI](#-powered-by-mistral-ai) · [ElevenLabs](#-powered-by-elevenlabs) · [Tension Engine](#-dynamic-tension-engine) · [Real-Time Streaming](#-real-time-streaming) · [Multi-Agent System](#-multi-agent-system) · [Skills Architecture](#-modular-skills-architecture) · [Progressive Disclosure](#-progressive-disclosure-design) · [Architecture](#-system-architecture) · [Quick Start](#-quick-start)
 
 </div>
 
@@ -46,6 +46,24 @@ Most AI games give you a chatbot to talk to. COUNCIL gives you a **society of ag
 > **Paste a sci-fi excerpt** → Characters become space station crew members hunting a saboteur — voiced by ElevenLabs, animated in 3D, with memories of what every other character has said.
 >
 > **Pick a built-in scenario** → Jump straight into classic social deduction with pre-designed worlds.
+
+---
+
+## ✦ The Turing Test Game
+
+<div align="center">
+<img src="assets/turing-test.svg" alt="The Turing Test Game — Hidden Human Among AI Agents" width="100%"/>
+</div>
+
+COUNCIL is the **reverse Turing test as gameplay**. You don't talk to an AI — you infiltrate a society of AI agents who are trying to figure out if *you* are one of them.
+
+| Dimension | How It Works |
+|-----------|-------------|
+| **Hidden Identity** | You are assigned a secret role and faction. AI agents receive the same treatment. Nobody knows who is human. |
+| **Behavioral Camouflage** | To survive, you must match the speaking patterns, strategic reasoning, and social behavior of the AI characters. |
+| **Social Pressure** | AI agents spontaneously accuse, defend, and form alliances. Your responses are judged against their mental models of "normal" agent behavior. |
+| **Asymmetric Information** | You see AI inner thoughts via ThinkingPanel — a window into their reasoning that they don't know you have. |
+| **Emergent Dynamics** | With 5–8 independent agents + 1 hidden human, every session produces unique social dynamics, alliances, and betrayals. |
 
 ---
 
@@ -231,17 +249,7 @@ Characters are hardened against prompt injection, personality drift, and AI self
 
 ### Tension & Complication Engine
 
-When discussion stalls, the Game Master dynamically injects narrative complications:
-
-| Complication | Effect |
-|-------------|--------|
-| **Revelation** | "Someone's story doesn't add up — a detail contradicts what was just said." |
-| **Time Pressure** | "The council demands decisive action NOW." |
-| **Suspicion Shift** | "Eyes turn toward someone who has been suspiciously silent." |
-| **Alliance Crack** | "Two allies exchange a tense glance — something unspoken hangs between them." |
-| **Evidence** | "A piece of evidence is discovered that changes everything." |
-
-Tension is tracked as a continuous value derived from elimination ratio, round progression, and kill events — rendered on the frontend as a color-coded pulsing bar.
+The Game Master monitors a continuous tension score and injects narrative complications (Revelation, Time Pressure, Suspicion Shift, Alliance Crack, Evidence) when discussion stalls or consensus forms too quickly. See **[Dynamic Tension Engine](#-dynamic-tension-engine)** for the full breakdown.
 
 ---
 
@@ -272,6 +280,87 @@ Every character response is analyzed by a 6-dimensional emotional model *before*
 - A Doctor who saved someone overnight → `[excited]` the next morning
 
 Voice delivery *matches* the character's internal emotional state — no extra LLM call needed.
+
+---
+
+## ✦ Dynamic Tension Engine
+
+<div align="center">
+<img src="assets/tension-engine.svg" alt="Dynamic Tension Engine — Adaptive Narrative Complication System" width="100%"/>
+</div>
+
+COUNCIL doesn't rely on scripted plot beats. The **Tension Engine** continuously tracks the emotional temperature of the game and dynamically injects narrative complications when discussion stalls, consensus forms too quickly, or a faction is cruising without opposition.
+
+### How Tension Is Calculated
+
+```
+tension = f(elimination_ratio, round_progression, recent_kills, vote_splits, silence_duration)
+```
+
+| Input Signal | What It Measures | Effect on Tension |
+|-------------|-----------------|-------------------|
+| **Elimination ratio** | How many players have been removed | Higher ratio → higher baseline |
+| **Round progression** | Which round the game is in (R1–R6) | Later rounds → escalating urgency |
+| **Recent kills** | Night kills in the last 1–2 rounds | Kills spike tension sharply |
+| **Vote splits** | How close the last vote was | Close votes → rising suspicion |
+| **Silence duration** | Time since last meaningful exchange | Long silence → triggers complication |
+
+### 5 Complication Types
+
+When tension crosses a threshold — or when discussion stalls — the Game Master injects one of five narrative complications:
+
+| Complication | Trigger | In-Game Effect |
+|-------------|---------|----------------|
+| **Revelation** | Hidden information surface | "Someone's story doesn't add up — a detail contradicts what was said two rounds ago." |
+| **Time Pressure** | Urgency escalation | "The council demands decisive action NOW. No more deliberation." |
+| **Suspicion Shift** | Blame redirection | "Eyes turn toward someone who has been suspiciously silent during every accusation." |
+| **Alliance Crack** | Trust fractures | "Two allies exchange a tense glance — something unspoken hangs between them." |
+| **Evidence** | New clues emerge | "A piece of evidence is discovered that changes everything about the previous vote." |
+
+Complications are **non-repeating within a session** and escalate in intensity as rounds progress. The result: every game follows a rising tension arc, with strategic pressure points that force genuine decision-making.
+
+---
+
+## ✦ Real-Time Streaming
+
+<div align="center">
+<img src="assets/realtime-streaming.svg" alt="Real-Time SSE Streaming — 26 Event Types, Zero Polling" width="100%"/>
+</div>
+
+COUNCIL uses **Server-Sent Events (SSE)** to deliver every game interaction in real time — word-by-word dialogue, vote-by-vote reveals, and action-by-action night results. Zero polling. Zero request-response delays.
+
+### 26 Event Types Across 4 Categories
+
+| Category | Events | Purpose |
+|----------|--------|---------|
+| **Dialogue** (8) | `thinking`, `ai_thinking`, `responders`, `stream_start`, `stream_delta`, `stream_end`, `response`, `reaction` | Word-by-word AI character speech with thinking indicators |
+| **Voting** (5) | `voting_started`, `vote`, `tally`, `elimination`, `player_eliminated` | Staggered vote reveals with dramatic pacing |
+| **Night** (5) | `night_started`, `night_action`, `night_results`, `night_kill_reveal`, `investigation_result` | Secret actions resolved with cinematic reveals |
+| **System** (8) | `complication`, `narration`, `discussion_warning`, `discussion_ending`, `game_over`, `last_words`, `error`, `done` | Game flow control and narrative injection |
+
+### Architecture
+
+```
+Backend (FastAPI)                    Frontend (Next.js)
+─────────────────                    ──────────────────
+Orchestrator                         SSE Consumer
+  │ asyncio.gather()                   │ fetch + ReadableStream
+  │ parallel agent calls               │ reader.read() loop
+  ▼                                    ▼
+SSE Emitter ──── data: {...}\n\n ───► GameStateProvider
+  │ StreamingResponse                    │ React Context
+  │ yield f"data: {json}\n\n"           │ dispatch by event type
+  ▼                                    ▼
+Game Master                          UI Components
+  │ narration + tension                │ ChatDrawer (word-by-word)
+  │ complication injection             │ VotePanel (staggered reveal)
+  ▼                                    │ NightActionPanel
+AI Agents                             │ RoundtableScene (3D)
+  │ Mistral streaming                  ▼
+  │ function calling                 Connected · 0ms polling
+```
+
+Every character response streams as `stream_delta` events — the frontend accumulates tokens and renders them character-by-character. Vote reveals use timed `vote` events with staggered delays for dramatic tension. Night results arrive as a sequence that builds suspense: `night_started` → `night_action` → `night_results` → `night_kill_reveal`.
 
 ---
 
@@ -508,26 +597,7 @@ COUNCIL separates **public information** from **hidden information** at every la
 
 ### SSE Streaming Architecture
 
-Every game interaction streams real-time events — no polling, no request-response delays:
-
-```
-Frontend                         Backend
-────────                         ───────
-POST /api/game/{id}/chat  ──►   Orchestrator handles chat
-                                 │
-                          ◄──   {"type":"thinking","character_id":"..."}
-                          ◄──   {"type":"ai_thinking","thought":"..."}
-                          ◄──   {"type":"responders","characters":[...]}
-                          ◄──   {"type":"stream_start","character_id":"..."}
-                          ◄──   {"type":"stream_delta","delta":"I "}
-                          ◄──   {"type":"stream_delta","delta":"think..."}
-                          ◄──   {"type":"stream_end","character_id":"..."}
-                          ◄──   {"type":"reaction","character_id":"..."}
-                          ◄──   {"type":"complication","text":"..."}
-                          ◄──   {"type":"done"}
-```
-
-**26 distinct event types** cover the full game lifecycle: `thinking`, `responders`, `response`, `reaction`, `complication`, `night_action`, `narration`, `voting_started`, `vote`, `tally`, `elimination`, `player_eliminated`, `night_started`, `night_results`, `night_kill_reveal`, `investigation_result`, `discussion_warning`, `discussion_ending`, `game_over`, `stream_start`, `stream_delta`, `stream_end`, `ai_thinking`, `last_words`, `error`, `done`.
+All game interactions use Server-Sent Events with **26 distinct event types** across 4 categories — zero polling, word-by-word delivery. See **[Real-Time Streaming](#-real-time-streaming)** for the full event catalog and architecture diagram.
 
 ### Dual-Layer Persistence
 

@@ -24,31 +24,31 @@
 
 <rect width="390" height="38" x="50" y="118" fill="#fff" stroke="#a7f3d0" stroke-width="1.2" rx="7"/>
 <circle cx="70" cy="137" r="12" fill="#d1fae5" stroke="#10b981"/>
-<text x="70" y="142" fill="#047857" font-family="Arial,sans-serif" font-size="13" text-anchor="middle" font-weight="700">A</text>
+<g transform="translate(70,137)"><circle cx="0" cy="-3" r="3" fill="#047857"/><path d="M-5,8 Q-5,2 0,2 Q5,2 5,8" fill="#047857"/></g>
 <text x="90" y="133" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Character Name &amp; Avatar</text>
 <text x="90" y="148" fill="#64748b" font-family="Arial,sans-serif" font-size="9">Unique identity, visual appearance in 3D roundtable</text>
 
 <rect width="390" height="38" x="50" y="164" fill="#fff" stroke="#a7f3d0" stroke-width="1.2" rx="7"/>
 <circle cx="70" cy="183" r="12" fill="#d1fae5" stroke="#10b981"/>
-<text x="70" y="187" fill="#047857" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" font-weight="700">S</text>
+<g transform="translate(70,183)"><path d="M-6,-4 L4,-4 Q7,-4 7,-1 L7,2 Q7,4 4,4 L-1,4 L-5,8 L-5,4 Q-7,4 -7,2 L-7,-1 Q-7,-4 -6,-4 Z" fill="#047857"/></g>
 <text x="90" y="179" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Speaking Style &amp; Public Role</text>
 <text x="90" y="194" fill="#64748b" font-family="Arial,sans-serif" font-size="9">Persona, voice patterns, declared occupation</text>
 
 <rect width="390" height="38" x="50" y="210" fill="#fff" stroke="#a7f3d0" stroke-width="1.2" rx="7"/>
 <circle cx="70" cy="229" r="12" fill="#d1fae5" stroke="#10b981"/>
-<text x="70" y="233" fill="#047857" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" font-weight="700">B</text>
+<g transform="translate(70,229)"><path d="M-7,0 Q-7,-5 0,-5 Q7,-5 7,0 Q7,5 0,5 Q-7,5 -7,0 Z" fill="none" stroke="#047857" stroke-width="1.5"/><circle cx="0" cy="0" r="2.5" fill="#047857"/></g>
 <text x="90" y="225" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Observable Behavior &amp; Statements</text>
 <text x="90" y="240" fill="#64748b" font-family="Arial,sans-serif" font-size="9">What they say in council, accusations, defenses</text>
 
 <rect width="390" height="38" x="50" y="256" fill="#fff" stroke="#a7f3d0" stroke-width="1.2" rx="7"/>
 <circle cx="70" cy="275" r="12" fill="#d1fae5" stroke="#10b981"/>
-<text x="70" y="279" fill="#047857" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" font-weight="700">R</text>
+<g transform="translate(70,275)"><circle cx="-3" cy="-3" r="2.5" fill="#047857"/><path d="M-8,5 Q-8,0 -3,0 Q2,0 2,5" fill="#047857"/><circle cx="4" cy="-3" r="2.5" fill="#047857"/><path d="M-1,5 Q-1,0 4,0 Q9,0 9,5" fill="#047857"/></g>
 <text x="90" y="271" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Relationship Reputation</text>
 <text x="90" y="286" fill="#64748b" font-family="Arial,sans-serif" font-size="9">Known alliances, public trust scores, social bonds</text>
 
 <rect width="390" height="38" x="50" y="302" fill="#fff" stroke="#a7f3d0" stroke-width="1.2" rx="7"/>
 <circle cx="70" cy="321" r="12" fill="#d1fae5" stroke="#10b981"/>
-<text x="70" y="325" fill="#047857" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" font-weight="700">E</text>
+<g transform="translate(70,321)"><path d="M0,-6 C-2,-6 -6,-4 -6,0 C-6,4 0,8 0,8 C0,8 6,4 6,0 C6,-4 2,-6 0,-6 Z" fill="#047857"/></g>
 <text x="90" y="317" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Emotional Indicators</text>
 <text x="90" y="332" fill="#64748b" font-family="Arial,sans-serif" font-size="9">Visible mood, animated reactions, tension cues</text>
 
@@ -59,31 +59,31 @@
 
 <rect width="390" height="38" x="520" y="118" fill="#fff" stroke="#fecaca" stroke-width="1.2" rx="7"/>
 <circle cx="540" cy="137" r="12" fill="#fef2f2" stroke="#ef4444"/>
-<text x="540" y="141" fill="#dc2626" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" font-weight="700">?</text>
+<g transform="translate(540,137)"><path d="M-2,-6 Q-2,-7 0,-7 Q3,-7 3,-4.5 Q3,-3 1,-2 L1,0" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/><circle cx="1" cy="3" r="1.2" fill="#dc2626"/></g>
 <text x="560" y="133" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Hidden Role</text>
 <text x="560" y="148" fill="#64748b" font-family="Arial,sans-serif" font-size="9">Werewolf / Seer / Doctor / Witch / Villager</text>
 
 <rect width="390" height="38" x="520" y="164" fill="#fff" stroke="#fecaca" stroke-width="1.2" rx="7"/>
 <circle cx="540" cy="183" r="12" fill="#fef2f2" stroke="#ef4444"/>
-<text x="540" y="187" fill="#dc2626" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" font-weight="700">F</text>
+<g transform="translate(540,183)"><path d="M0,-7 L-6,-4 L-6,2 Q-6,7 0,8 Q6,7 6,2 L6,-4 Z" fill="#dc2626"/></g>
 <text x="560" y="179" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Faction Alignment</text>
 <text x="560" y="194" fill="#64748b" font-family="Arial,sans-serif" font-size="9">Good vs Evil — determines team victory</text>
 
 <rect width="390" height="38" x="520" y="210" fill="#fff" stroke="#fecaca" stroke-width="1.2" rx="7"/>
 <circle cx="540" cy="229" r="12" fill="#fef2f2" stroke="#ef4444"/>
-<text x="540" y="233" fill="#dc2626" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" font-weight="700">W</text>
+<g transform="translate(540,229)"><path d="M-3,-7 L-5,-3 L5,-3 L3,-7 Z" fill="#dc2626"/><path d="M-5,-3 L-6,3 L6,3 L5,-3 Z" fill="#dc2626"/><line x1="0" y1="3" x2="0" y2="7" stroke="#dc2626" stroke-width="2"/><line x1="-4" y1="7" x2="4" y2="7" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></g>
 <text x="560" y="225" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Win Condition</text>
 <text x="560" y="240" fill="#64748b" font-family="Arial,sans-serif" font-size="9">Specific objective that triggers faction victory</text>
 
 <rect width="390" height="38" x="520" y="256" fill="#fff" stroke="#fecaca" stroke-width="1.2" rx="7"/>
 <circle cx="540" cy="275" r="12" fill="#fef2f2" stroke="#ef4444"/>
-<text x="540" y="279" fill="#dc2626" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" font-weight="700">V</text>
+<g transform="translate(540,275)"><rect x="-6" y="-7" width="12" height="14" rx="1.5" fill="none" stroke="#dc2626" stroke-width="1.5"/><polyline points="-3,0 -1,3 4,-3" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
 <text x="560" y="271" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Internal Voting Reasoning</text>
 <text x="560" y="286" fill="#64748b" font-family="Arial,sans-serif" font-size="9">Why each AI voted the way they did</text>
 
 <rect width="390" height="38" x="520" y="302" fill="#fff" stroke="#fecaca" stroke-width="1.2" rx="7"/>
 <circle cx="540" cy="321" r="12" fill="#fef2f2" stroke="#ef4444"/>
-<text x="540" y="325" fill="#dc2626" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" font-weight="700">N</text>
+<g transform="translate(540,321)"><path d="M3,-6 A7,7 0 1,0 3,6 A5,5 0 0,1 3,-6 Z" fill="#dc2626"/></g>
 <text x="560" y="317" fill="#1e293b" font-family="Arial,sans-serif" font-size="11" font-weight="700">Night Action Rationale &amp; AI Monologue</text>
 <text x="560" y="332" fill="#64748b" font-family="Arial,sans-serif" font-size="9">Kill/save/investigate decisions + inner thought process</text>
 
