@@ -81,7 +81,7 @@ COUNCIL est le **test de Turing inverse en tant que gameplay**. Vous ne parlez p
 | **Voix en temps reel** | ElevenLabs TTS donne a chaque personnage une voix unique avec une modulation emotionnelle. L'API Scribe permet la saisie vocale. L'attenuation audio intelligente melange la voix avec la musique d'ambiance adaptee a la phase. |
 | **Table ronde 3D** | Scene Three.js immersive avec des avatars de personnages animes, une camera dynamique suivant le locuteur, des particules flottantes et un eclairage atmospherique. |
 | **Mode Fantome** | Les joueurs elimines deviennent des spectateurs qui peuvent voir tous les roles caches et les pensees internes de l'IA — une fenetre sur le raisonnement reel des personnages IA. |
-| **7 competences modulaires** | Modules cognitifs definis en YAML (Raisonnement strategique, Maitrise de la tromperie, Consolidation de la memoire, etc.) avec resolution de dependances, injection conditionnelle par faction et augmentation de prompt par priorite. |
+| **7 competences modulaires** | Modules cognitifs definis en SKILL.md (frontmatter YAML + injections Markdown) : Raisonnement strategique, Maitrise de la tromperie, Consolidation de la memoire, etc. Avec resolution de dependances, injection conditionnelle par faction et augmentation de prompt par priorite. |
 | **Moteur de tension** | Suivi dynamique de la tension avec injection de complications narratives — revelations soudaines, pression temporelle, deplacements de soupçons et fissures d'alliances rendent chaque session imprevisible. |
 | **Tout en streaming** | SSE diffuse 26 types d'evenements distincts — dialogues IA, votes, resultats nocturnes, complications — mot par mot vers le frontend en temps reel. Zero polling. |
 | **Divulgation progressive** | Revelation strategique de l'information a travers les revelations d'elimination, le mode Fantome, les resultats nocturnes, le ThinkingPanel et les tableaux de statistiques de fin de partie. |
@@ -202,7 +202,7 @@ Chaque personnage IA est construit comme un prompt systeme en couches — un mod
 ║  Memoire : MCT (10 evenements) · Episodique (8 resumes) ·    ║
 ║  Semantique                                                   ║
 ║  Relations : proximite par personnage (0-1) + confiance (-1,1)║
-║  + 7 injections de competences YAML (filtrees par faction,    ║
+║  + 7 injections de competences (frontmatter YAML, par faction)║
 ║  triees par priorite)                                         ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
@@ -422,7 +422,7 @@ Analyse LLM (mistral-small) + Detection par mots-cles
 <img src="assets/skills-system.svg" alt="Modular Skills Architecture" width="100%"/>
 </div>
 
-COUNCIL implemente un **systeme de competences cognitives modulaire** — 7 modules de competences definis en YAML qui augmentent l'intelligence des agents a l'execution via une injection de prompts resolue par dependances et conditionnee par faction.
+COUNCIL implemente un **systeme de competences cognitives modulaire** — 7 modules de competences definis en SKILL.md (frontmatter YAML + injections Markdown) qui augmentent l'intelligence des agents a l'execution via une injection de prompts resolue par dependances et conditionnee par faction.
 
 ### Pourquoi les competences sont importantes
 
@@ -474,7 +474,7 @@ backend/game/skills/
 ```
 ┌──────────────┐    ┌────────────────┐    ┌────────────────┐
 │ Decouverte    │    │ Resolution      │    │ Detection       │
-│ YAML          │ →  │ des dependances │ →  │ des conflits    │
+│ SKILL.md      │ →  │ des dependances │ →  │ des conflits    │
 │ Scan skills/  │    │ DFS recursif    │    │ Verification    │
 │ Parse SKILL.md│    │ avec detection  │    │ croisee de      │
 │ par repertoire│    │ de cycles       │    │ toutes les      │
@@ -750,12 +750,12 @@ COUNCIL/
 │   │   ├── character_agent.py        # Systeme de prompt a 4 couches, moteur IA emotionnel
 │   │   ├── character_factory.py      # Generation de personnages LLM (Sims + Mind Mirror)
 │   │   ├── document_engine.py        # OCR → WorldModel pipeline adaptatif
-│   │   ├── skill_loader.py           # Decouverte YAML, resolution de dependances, injection
+│   │   ├── skill_loader.py           # Decouverte SKILL.md, resolution de dependances, injection
 │   │   ├── persistence.py            # Redis (chaud) + Supabase (froid) double couche
 │   │   ├── state.py                  # Machine a etats des phases + serialisation
 │   │   ├── prompts.py                # Tous les modeles de prompts (14 systemes de prompts)
 │   │   ├── adversarial_tester.py     # Suite de tests de robustesse (14 sondes jailbreak)
-│   │   └── skills/                   # 7 modules de competences cognitives YAML
+│   │   └── skills/                   # 7 modules cognitifs (SKILL.md + injections/)
 │   │       ├── strategic_reasoning/  # Pipeline SSRSR en 5 etapes (P:10)
 │   │       ├── contrastive_examples/ # Exemples comportementaux bons/mauvais (P:15)
 │   │       ├── memory_consolidation/ # Systeme de memoire a 3 niveaux (P:20)

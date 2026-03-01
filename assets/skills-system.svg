@@ -18,7 +18,7 @@
 
 <!-- Section: 7 Skills Grid -->
 <text x="40" y="86" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="14" font-weight="700">Skill Modules</text>
-<text x="175" y="86" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10">Loaded by priority order (lowest first) from YAML skill definitions</text>
+<text x="175" y="86" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10">Loaded by priority order (lowest first) from SKILL.md definitions (YAML frontmatter)</text>
 
 <!-- ================================================================ -->
 <!-- ROW 1: Skills 1-4 -->
@@ -322,12 +322,12 @@
 <text x="225" y="660" fill="#94a3b8" font-family="Arial,sans-serif" font-size="10">Runtime skill discovery, validation, and injection</text>
 
 <g filter="url(#b)">
-  <rect width="880" height="90" x="40" y="672" fill="#fafafa" stroke="#e2e8f0" stroke-width="1.5" rx="10"/>
+  <rect width="880" height="96" x="40" y="672" fill="#fafafa" stroke="#e2e8f0" stroke-width="1.5" rx="10"/>
 
   <rect width="118" height="50" x="56" y="692" fill="#fff" stroke="#6366f1" stroke-width="1.5" rx="8"/>
   <rect width="118" height="18" x="56" y="692" fill="#6366f1" rx="8"/>
   <rect width="118" height="8" x="56" y="702" fill="#6366f1"/>
-  <text x="115" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" text-anchor="middle">YAML Discovery</text>
+  <text x="115" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8" font-weight="700" text-anchor="middle">SKILL.md Discovery</text>
   <text x="115" y="726" fill="#4338ca" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">Scan SKILL.md files</text>
   <text x="115" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">in skills/ directory</text>
 
@@ -346,7 +346,7 @@
   <rect width="118" height="18" x="344" y="692" fill="#a855f7" rx="8"/>
   <rect width="118" height="8" x="344" y="702" fill="#a855f7"/>
   <text x="403" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" text-anchor="middle">Conflict Check</text>
-  <text x="403" y="726" fill="#7e22ce" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">Detect conflicts field</text>
+  <text x="403" y="726" fill="#7e22ce" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">Check conflicts field</text>
   <text x="403" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">mutual exclusion rules</text>
 
   <path stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-pipe)" d="M466 717h18"/>
@@ -356,7 +356,7 @@
   <rect width="108" height="8" x="488" y="702" fill="#c026d3"/>
   <text x="542" y="705" fill="#fff" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" text-anchor="middle">Priority Sort</text>
   <text x="542" y="726" fill="#a21caf" font-family="Arial,sans-serif" font-size="7.5" text-anchor="middle">Ascending priority</text>
-  <text x="542" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">10 &gt; 15 &gt; ... &gt; 60</text>
+  <text x="542" y="736" fill="#64748b" font-family="Arial,sans-serif" font-size="7" text-anchor="middle">10 &#x2192; 15 &#x2192; &#x2026; &#x2192; 60</text>
 
   <path stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-pipe)" d="M600 717h18"/>
 

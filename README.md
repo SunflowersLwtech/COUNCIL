@@ -81,7 +81,7 @@ COUNCIL is the **reverse Turing test as gameplay**. You don't talk to an AI — 
 | **Real-Time Voice** | ElevenLabs TTS gives each character a unique voice with emotion-modulated delivery. Scribe API enables speech-to-text input. Smart audio ducking blends voice with phase-aware ambient music. |
 | **3D Roundtable** | Immersive Three.js scene with animated character avatars, dynamic camera following the speaker, floating particles, and atmospheric lighting. |
 | **Ghost Mode** | Eliminated players become spectators who can see all hidden roles and AI inner thoughts — a window into how AI characters truly reason. |
-| **7 Modular Skills** | YAML-defined cognitive modules (Strategic Reasoning, Deception Mastery, Memory Consolidation, etc.) with dependency resolution, faction-conditional injection, and priority-ordered prompt augmentation. |
+| **7 Modular Skills** | SKILL.md-defined cognitive modules (Strategic Reasoning, Deception Mastery, Memory Consolidation, etc.) with YAML frontmatter, dependency resolution, faction-conditional injection, and priority-ordered prompt augmentation. |
 | **Tension Engine** | Dynamic tension tracking with narrative complication injection — sudden revelations, time pressure, suspicion shifts, and alliance cracks keep every session unpredictable. |
 | **Streaming Everything** | SSE streams 26 distinct event types — AI dialogue, votes, night results, complications — word-by-word to the frontend in real time. Zero polling. |
 | **Progressive Disclosure** | Strategic information revelation through elimination reveals, Ghost Mode, night results, ThinkingPanel, and game-end stat boards. |
@@ -197,7 +197,7 @@ Every AI character is constructed as a layered system prompt — a psychological
 ║  Emotional state: happiness·anger·fear·trust·energy·curiosity ║
 ║  Memory: STM (10 events) · Episodic (8 summaries) · Semantic ║
 ║  Relationships: per-character closeness (0-1) + trust (-1,1)  ║
-║  + 7 YAML Skill Injections (faction-filtered, priority-sorted)║
+║  + 7 Skill Injections (YAML frontmatter, faction-filtered)    ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
@@ -415,7 +415,7 @@ LLM Analysis (mistral-small) + Keyword Detection
 <img src="assets/skills-system.svg" alt="Modular Skills Architecture" width="100%"/>
 </div>
 
-COUNCIL implements a **modular cognitive skills system** — 7 YAML-defined skill modules that augment agent intelligence at runtime through dependency-resolved, faction-conditional prompt injection.
+COUNCIL implements a **modular cognitive skills system** — 7 SKILL.md-defined skill modules (YAML frontmatter + Markdown injections) that augment agent intelligence at runtime through dependency-resolved, faction-conditional prompt injection.
 
 ### Why Skills Matter
 
@@ -466,7 +466,7 @@ backend/game/skills/
 
 ```
 ┌──────────────┐    ┌────────────────┐    ┌────────────────┐
-│ YAML          │    │ Dependency      │    │ Conflict       │
+│ SKILL.md      │    │ Dependency      │    │ Conflict       │
 │ Discovery     │ →  │ Resolution      │ →  │ Detection      │
 │ Scan skills/  │    │ Recursive DFS   │    │ Cross-check    │
 │ Parse SKILL.md│    │ with cycle      │    │ all resolved   │
@@ -742,12 +742,12 @@ COUNCIL/
 │   │   ├── character_agent.py        # 4-layer prompt system, emotional AI engine
 │   │   ├── character_factory.py      # LLM character generation (Sims + Mind Mirror)
 │   │   ├── document_engine.py        # OCR → WorldModel adaptive pipeline
-│   │   ├── skill_loader.py           # YAML discovery, dependency resolution, injection
+│   │   ├── skill_loader.py           # SKILL.md discovery, dependency resolution, injection
 │   │   ├── persistence.py            # Redis (hot) + Supabase (cold) dual layer
 │   │   ├── state.py                  # Phase state machine + serialization
 │   │   ├── prompts.py                # All prompt templates (14 prompt systems)
 │   │   ├── adversarial_tester.py     # Robustness test suite (14 jailbreak probes)
-│   │   └── skills/                   # 7 YAML cognitive skill modules
+│   │   └── skills/                   # 7 cognitive skill modules (SKILL.md + injections/)
 │   │       ├── strategic_reasoning/  # SSRSR 5-step pipeline (P:10)
 │   │       ├── contrastive_examples/ # Good/bad behavioral examples (P:15)
 │   │       ├── memory_consolidation/ # 3-tier memory system (P:20)
