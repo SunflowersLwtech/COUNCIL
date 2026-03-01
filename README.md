@@ -22,6 +22,7 @@
 [![Upstash](https://img.shields.io/badge/Upstash-00E9A3?logo=upstash&logoColor=white)](https://upstash.com)
 [![Pydantic](https://img.shields.io/badge/Pydantic_v2-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev)
 [![License MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![DeepWiki](https://img.shields.io/badge/DeepWiki-Explore_Codebase-2563EB?logo=bookstack&logoColor=white)](https://deepwiki.com/SunflowersLwtech/COUNCIL)
 
 ---
 
