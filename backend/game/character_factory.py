@@ -15,7 +15,7 @@ from backend.game.prompts import CHARACTER_GENERATION_SYSTEM, CHARACTER_GENERATI
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-VOICE_POOL = ["Sarah", "George", "Charlie", "Alice", "Harry", "Emily", "James", "Lily"]
+VOICE_POOL = ["Sarah", "George", "Charlie", "Alice", "Harry", "Jessica", "Brian", "Lily"]
 
 # Timeout for Mistral API calls (seconds).
 # Character generation with detailed traits (big five, MBTI, sims, mind mirror)
@@ -151,6 +151,8 @@ class CharacterFactory:
 
         # Guarantee at least 1 Doctor/Protector among good-faction characters
         characters = self._ensure_doctor_role(characters, world)
+        # Guarantee at least 1 Witch among good-faction characters
+        characters = self._ensure_witch_role(characters, world)
 
         return characters
 
@@ -195,6 +197,61 @@ class CharacterFactory:
         ] + ["Protect key allies at night. Don't reveal your role unless strategically necessary."]
 
         logger.info("Guaranteed Doctor role assigned to %s", target.name)
+        return characters
+
+    def _ensure_witch_role(
+        self, characters: list[Character], world: WorldModel
+    ) -> list[Character]:
+        """Ensure at least one good-faction character has a Witch role with potions."""
+        witch_keywords = {"witch", "alchemist", "potion", "herbalist"}
+        has_witch = any(
+            any(kw in c.hidden_role.lower() for kw in witch_keywords)
+            for c in characters
+        )
+        if has_witch:
+            # Ensure existing witch has potion_stock
+            for c in characters:
+                if any(kw in c.hidden_role.lower() for kw in witch_keywords):
+                    if not c.potion_stock:
+                        c.potion_stock = {"save": 1, "poison": 1}
+            return characters
+
+        evil_factions = {
+            f.get("name", "")
+            for f in world.factions
+            if f.get("alignment", "").lower() == "evil"
+        }
+
+        # Find a good-faction non-special character (not Doctor, not Seer)
+        candidates = [
+            c for c in characters
+            if c.faction not in evil_factions
+            and "doctor" not in c.hidden_role.lower()
+            and "protector" not in c.hidden_role.lower()
+            and "seer" not in c.hidden_role.lower()
+            and "investigat" not in c.hidden_role.lower()
+        ]
+        if not candidates:
+            return characters
+
+        target = random.choice(candidates)
+        target.hidden_role = "Witch"
+        target.potion_stock = {"save": 1, "poison": 1}
+        target.hidden_knowledge = [
+            f"You are the Witch of the {target.faction}.",
+            "Ability: You have two one-use potions.",
+            "SAVE potion: Once per game, protect the person targeted for death tonight.",
+            "POISON potion: Once per game, eliminate an additional person during the night.",
+        ] + [k for k in target.hidden_knowledge if "witch" not in k.lower()]
+        target.behavioral_rules = [
+            r for r in target.behavioral_rules
+            if "villager" not in r.lower()
+        ] + [
+            "Use your potions wisely — each can only be used once.",
+            "Don't reveal your role unless strategically necessary.",
+        ]
+
+        logger.info("Guaranteed Witch role assigned to %s", target.name)
         return characters
 
     def _fallback_characters(

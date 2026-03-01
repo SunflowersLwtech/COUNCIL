@@ -34,6 +34,7 @@ import PhaseTransition from "@/components/PhaseTransition";
 import { seedToColor } from "@/components/CharacterCard";
 import LanguageToggle from "@/components/LanguageToggle";
 import AudioControls from "@/components/audio-controls";
+import ThinkingPanel from "@/components/ThinkingPanel";
 import { useBackgroundAudio } from "@/hooks/useBackgroundAudio";
 import { useSFX } from "@/hooks/useSFX";
 
@@ -303,13 +304,13 @@ export default function GameBoard() {
   const game = useGameState();
   const roundtable = useRoundtable();
 
+  useBackgroundAudio(game.phase);
+
   const voice = useVoice({
     onTranscript: (text) => {
       game.sendMessage(text);
     },
   });
-
-  useBackgroundAudio();
   const sfx = useSFX();
 
   // SFX: react to phase changes
@@ -483,6 +484,9 @@ export default function GameBoard() {
           <CharacterRoster />
           {game.playerRole && <PlayerRoleCard />}
         </div>
+
+        {/* ── AI Thinking Panel ──────────────────────────── */}
+        <ThinkingPanel />
 
         {/* ── Ghost Mode Overlay ──────────────────────────── */}
         {game.isGhostMode && <GhostOverlay />}
@@ -740,6 +744,7 @@ function ChatMessage({ message }: { message: GameChatMessage }) {
     isUser && "chat-panel-msg-user",
     message.isThinking && "chat-panel-msg-thinking",
     isComplication && "chat-panel-msg-complication",
+    message.isLastWords && "chat-panel-msg-last-words",
     "animate-fade-in-up",
   ]
     .filter(Boolean)
@@ -783,9 +788,12 @@ function ChatMessage({ message }: { message: GameChatMessage }) {
               ? { color: "#FFD700", fontStyle: "italic" }
               : isComplication
                 ? { color: "#fbbf24", fontStyle: "italic" }
-                : undefined
+                : message.isLastWords
+                  ? { color: "#f87171", fontStyle: "italic", opacity: 0.85 }
+                  : undefined
           }
         >
+          {message.isLastWords && "\u2620 "}
           {message.content}
         </p>
       )}

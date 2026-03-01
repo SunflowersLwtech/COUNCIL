@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 # Base probability for spontaneous NPC reactions
 BASE_REACTION_PROB = 0.25
+STREAM_DELTA_PACE_SEC = 0.04
+INTER_SPEAKER_PACE_SEC = 0.40
 
 
 class GameOrchestrator:
@@ -125,6 +127,18 @@ class GameOrchestrator:
 
     def _get_agents(self, session_id: str) -> dict[str, CharacterAgent]:
         return self._agents.get(session_id, {})
+
+    @staticmethod
+    def _display_chunks(text: str, chunk_size: int = 3):
+        """Split text into small visual chunks for smoother frontend streaming."""
+        if not text:
+            return
+        i = 0
+        n = len(text)
+        while i < n:
+            end = min(i + chunk_size, n)
+            yield text[i:end]
+            i = end
 
     def _public_state(self, state: GameState, full: bool = False) -> dict:
         """Build public projection of game state (no hidden info).
@@ -398,7 +412,7 @@ class GameOrchestrator:
         }
 
     async def handle_open_discussion(self, session_id: str) -> AsyncGenerator[str, None]:
-        """Trigger opening statements from 3-4 AI characters at the start of discussion. Yields SSE events."""
+        """Trigger structured opening statements from ALL alive AI characters. Yields SSE events."""
         state = await self._get_session(session_id)
         agents = self._get_agents(session_id)
 
@@ -415,24 +429,29 @@ class GameOrchestrator:
             yield f"data: {json.dumps({'type': 'done', 'tension': state.tension_level})}\n\n"
             return
 
-        alive = game_state.get_alive_characters(state)
-        # Pick 3-4 characters randomly for opening statements
-        num_speakers = min(len(alive), random.randint(3, 4))
-        speakers = random.sample(alive, num_speakers)
+        # Determine AI-optimized speaking order for ALL alive characters
+        speaking_order = await self.game_master.determine_speaking_order(state, agents)
+        alive_map = {c.id: c for c in game_state.get_alive_characters(state)}
+        speakers = [alive_map[cid] for cid in speaking_order if cid in alive_map]
 
         yield f"data: {json.dumps({'type': 'responders', 'character_ids': [s.id for s in speakers]})}\n\n"
 
         opening_prompt = (
-            "The council session has just begun. This is the very first moment of discussion — "
-            "no one has spoken yet. Make a brief opening statement (1-3 sentences) to the council. "
+            "The council session has just begun. This is the structured opening round — "
+            "each member speaks in turn. Make a brief opening statement (1-3 sentences) to the council. "
             "You might express suspicion, share an observation, set the tone, or probe others. "
-            "Do NOT reference any previous messages since there are none yet."
+            "Reference events from previous rounds if applicable."
         )
 
         for i, char in enumerate(speakers):
             agent = agents.get(char.id)
             if not agent:
                 continue
+
+            # Generate AI inner thought before public response
+            inner_thought = await agent.generate_inner_thought(state.messages)
+            if inner_thought:
+                yield f"data: {json.dumps({'type': 'ai_thinking', 'character_id': char.id, 'character_name': char.name, 'thinking_content': inner_thought})}\n\n"
 
             yield f"data: {json.dumps({'type': 'thinking', 'character_id': char.id, 'character_name': char.name})}\n\n"
 
@@ -443,8 +462,9 @@ class GameOrchestrator:
                 try:
                     async for chunk in agent.respond_stream(opening_prompt, state.messages, talk_modifier="Keep your opening brief and impactful."):
                         full_response += chunk
-                        yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': char.id, 'delta': chunk})}\n\n"
-                        await asyncio.sleep(0)
+                        for delta in self._display_chunks(chunk):
+                            yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': char.id, 'delta': delta})}\n\n"
+                            await asyncio.sleep(STREAM_DELTA_PACE_SEC)
                 except Exception:
                     if not full_response:
                         full_response = agent._get_fallback_response()
@@ -466,6 +486,8 @@ class GameOrchestrator:
                 yield f"data: {json.dumps({'type': 'stream_end', 'character_id': char.id, 'character_name': char.name, 'content': response, 'tts_text': tts_text, 'voice_id': char.voice_id, 'emotion': dominant_emotion})}\n\n"
             except Exception as e:
                 yield f"data: {json.dumps({'type': 'error', 'character_id': char.id, 'error': str(e)})}\n\n"
+            if i < len(speakers) - 1:
+                await asyncio.sleep(INTER_SPEAKER_PACE_SEC)
 
         state = self.game_master.update_tension(state)
         self._sessions[session_id] = state
@@ -525,6 +547,12 @@ class GameOrchestrator:
                 continue
 
             char = agent.character
+
+            # Generate AI inner thought before public response
+            inner_thought = await agent.generate_inner_thought(state.messages)
+            if inner_thought:
+                yield f"data: {json.dumps({'type': 'ai_thinking', 'character_id': char_id, 'character_name': char.name, 'thinking_content': inner_thought})}\n\n"
+
             yield f"data: {json.dumps({'type': 'thinking', 'character_id': char_id, 'character_name': char.name})}\n\n"
 
             try:
@@ -537,8 +565,9 @@ class GameOrchestrator:
                 try:
                     async for chunk in agent.respond_stream(message, state.messages, talk_modifier=talk_modifier):
                         full_response += chunk
-                        yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': char_id, 'delta': chunk})}\n\n"
-                        await asyncio.sleep(0)  # yield control so ASGI flushes each SSE event
+                        for delta in self._display_chunks(chunk):
+                            yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': char_id, 'delta': delta})}\n\n"
+                            await asyncio.sleep(STREAM_DELTA_PACE_SEC)
                 except Exception:
                     if not full_response:
                         full_response = agent._get_fallback_response()
@@ -582,6 +611,8 @@ class GameOrchestrator:
                 yield f"data: {json.dumps({'type': 'stream_end', 'character_id': char_id, 'character_name': char.name, 'content': response, 'tts_text': tts_text, 'voice_id': char.voice_id, 'emotion': dominant_emotion})}\n\n"
             except Exception as e:
                 yield f"data: {json.dumps({'type': 'error', 'character_id': char_id, 'error': str(e)})}\n\n"
+            if i < len(responder_ids) - 1:
+                await asyncio.sleep(INTER_SPEAKER_PACE_SEC)
 
         # Spontaneous reactions: probability based on emotional state (anger boosts it)
         if len(state.messages) >= 4:
@@ -610,7 +641,7 @@ class GameOrchestrator:
                         for wi, word in enumerate(words):
                             chunk = word if wi == 0 else " " + word
                             yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': reactor.id, 'delta': chunk})}\n\n"
-                            await asyncio.sleep(0.03)
+                            await asyncio.sleep(STREAM_DELTA_PACE_SEC)
                         react_msg = ChatMessage(
                             speaker_id=reactor.id,
                             speaker_name=reactor.name,
@@ -684,7 +715,11 @@ class GameOrchestrator:
         state, _ = await self.game_master.advance_phase(state, agents)
 
         if vote_result.is_tie:
-            narration = await self.game_master._generate_narration(state, "tie_vote", {})
+            # Use Master Agent ruling narration if available, else fallback
+            if vote_result.ruling_narration:
+                narration = vote_result.ruling_narration
+            else:
+                narration = await self.game_master._generate_narration(state, "tie_vote", {})
             yield f"data: {json.dumps({'type': 'narration', 'content': narration})}\n\n"
         elif vote_result.eliminated_id:
             # Check if the player was eliminated
@@ -747,10 +782,23 @@ class GameOrchestrator:
                     )
                     yield f"data: {json.dumps({'type': 'elimination', 'character_id': vote_result.eliminated_id, 'character_name': vote_result.eliminated_name, 'hidden_role': eliminated_char.hidden_role, 'faction': eliminated_char.faction, 'narration': narration})}\n\n"
 
+                    # Generate and emit last words from the eliminated character
+                    eliminated_agent = agents.get(vote_result.eliminated_id)
+                    if eliminated_agent:
+                        last_words = await eliminated_agent.generate_last_words("vote")
+                        if last_words:
+                            yield f"data: {json.dumps({'type': 'last_words', 'character_id': vote_result.eliminated_id, 'character_name': vote_result.eliminated_name, 'content': last_words})}\n\n"
+
         # Check win condition and advance (reveal -> night or ended)
         state, narration = await self.game_master.advance_phase(state, agents)
         if state.phase == "ended":
-            yield f"data: {json.dumps({'type': 'game_over', 'winner': state.winner, 'narration': narration})}\n\n"
+            all_characters = [
+                {"id": c.id, "name": c.name, "hidden_role": c.hidden_role, "faction": c.faction,
+                 "is_eliminated": c.is_eliminated, "persona": c.persona, "public_role": c.public_role,
+                 "avatar_seed": c.avatar_seed}
+                for c in state.characters
+            ]
+            yield f"data: {json.dumps({'type': 'game_over', 'winner': state.winner, 'narration': narration, 'all_characters': all_characters})}\n\n"
         elif state.phase == "night":
             # Emit night start narration
             if narration:
@@ -802,7 +850,16 @@ class GameOrchestrator:
         if "seer" in role or "investigat" in role:
             return "investigate"  # Seer can always investigate
         if "doctor" in role or "protect" in role:
-            return "protect" if is_early_round else "protect"  # Doctor can practice-protect
+            return "protect"
+        if "witch" in role or "alchemist" in role:
+            stock = state.player_role.potion_stock or {}
+            has_save = stock.get("save", 0) > 0
+            has_poison = stock.get("poison", 0) > 0
+            if has_save:
+                return "save"  # Prioritize save; frontend will show both options
+            if has_poison:
+                return "poison"
+            return None  # No potions left
         return None  # Villager — no night action
 
     def _get_eligible_night_targets(self, state: GameState) -> list[dict]:
@@ -872,8 +929,9 @@ class GameOrchestrator:
                             talk_modifier="[NIGHT WHISPER - ALLIES ONLY] Speak freely about kill strategy."
                         ):
                             full += chunk
-                            yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': ally_char.id, 'delta': chunk})}\n\n"
-                            await asyncio.sleep(0)
+                            for delta in self._display_chunks(chunk):
+                                yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': ally_char.id, 'delta': delta})}\n\n"
+                                await asyncio.sleep(STREAM_DELTA_PACE_SEC)
                     except Exception:
                         if not full:
                             full = agent._get_fallback_response()
@@ -933,8 +991,9 @@ class GameOrchestrator:
                     talk_modifier="[NIGHT WHISPER - ALLIES ONLY] Respond to your ally's message. Discuss kill strategy freely. 1-2 sentences."
                 ):
                     full += chunk
-                    yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': ally.id, 'delta': chunk})}\n\n"
-                    await asyncio.sleep(0)
+                    for delta in self._display_chunks(chunk):
+                        yield f"data: {json.dumps({'type': 'stream_delta', 'character_id': ally.id, 'delta': delta})}\n\n"
+                        await asyncio.sleep(STREAM_DELTA_PACE_SEC)
             except Exception:
                 if not full:
                     full = agent._get_fallback_response()
@@ -1010,6 +1069,13 @@ class GameOrchestrator:
                 await asyncio.sleep(3)  # Let dawn narration TTS play first
                 yield f"data: {json.dumps({'type': 'night_kill_reveal', 'character_id': char.id, 'character_name': char.name, 'hidden_role': char.hidden_role, 'faction': char.faction, 'win_condition': char.win_condition, 'hidden_knowledge': char.hidden_knowledge, 'behavioral_rules': char.behavioral_rules, 'persona': char.persona, 'public_role': char.public_role, 'avatar_seed': char.avatar_seed, 'voice_id': getattr(char, 'voice_id', ''), 'is_eliminated': True})}\n\n"
 
+                # Generate and emit last words for the night kill victim
+                killed_agent = agents.get(killed_id)
+                if killed_agent:
+                    last_words = await killed_agent.generate_last_words("night_kill")
+                    if last_words:
+                        yield f"data: {json.dumps({'type': 'last_words', 'character_id': char.id, 'character_name': char.name, 'content': last_words})}\n\n"
+
         # If player was killed, emit player_eliminated with all hidden info for ghost mode
         if player_killed and state.player_role:
             all_characters = [
@@ -1073,7 +1139,13 @@ class GameOrchestrator:
             }
             template_key = "game_end_evil" if winner in evil_factions else "game_end_good"
             end_narration = await self.game_master._generate_narration(state, template_key, {"faction": winner})
-            yield f"data: {json.dumps({'type': 'game_over', 'winner': state.winner, 'narration': end_narration})}\n\n"
+            all_characters = [
+                {"id": c.id, "name": c.name, "hidden_role": c.hidden_role, "faction": c.faction,
+                 "is_eliminated": c.is_eliminated, "persona": c.persona, "public_role": c.public_role,
+                 "avatar_seed": c.avatar_seed}
+                for c in state.characters
+            ]
+            yield f"data: {json.dumps({'type': 'game_over', 'winner': state.winner, 'narration': end_narration, 'all_characters': all_characters})}\n\n"
         else:
             # Advance to next discussion round
             state, disc_narration = await self.game_master.advance_phase(state, agents)

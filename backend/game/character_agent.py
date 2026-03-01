@@ -14,6 +14,7 @@ from backend.models.game_models import Character, CharacterPublicInfo, ChatMessa
 from backend.game.prompts import (
     CHARACTER_SYSTEM_PROMPT, VOTE_PROMPT,
     NIGHT_ACTION_PROMPT, SPONTANEOUS_REACTION_PROMPT, ROUND_SUMMARY_PROMPT,
+    INNER_THOUGHT_PROMPT,
 )
 
 if TYPE_CHECKING:
@@ -43,11 +44,11 @@ GAME_TOOLS = [
         "type": "function",
         "function": {
             "name": "night_action",
-            "description": "Perform a night action (kill/investigate/protect)",
+            "description": "Perform a night action (kill/investigate/protect/save/poison)",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "action_type": {"type": "string", "enum": ["kill", "investigate", "protect", "none"]},
+                    "action_type": {"type": "string", "enum": ["kill", "investigate", "protect", "save", "poison", "none"]},
                     "target_id": {"type": "string", "description": "Target player ID"},
                     "reasoning": {"type": "string", "description": "Internal reasoning"},
                 },
@@ -608,6 +609,84 @@ class CharacterAgent(MistralBaseAgent):
             self._conversation_history = self._conversation_history[-MAX_CONVERSATION_HISTORY:]
         if len(self._round_memory) > MAX_ROUND_MEMORY:
             self._round_memory = self._round_memory[-MAX_ROUND_MEMORY:]
+
+    async def generate_inner_thought(self, context_messages: list[ChatMessage]) -> str:
+        """Generate an honest inner monologue before the character speaks publicly.
+        Uses a fast model with a short timeout. Returns empty string on failure."""
+        recent = context_messages[-10:] if len(context_messages) > 10 else context_messages
+        context = ""
+        for msg in recent:
+            prefix = f"[{msg.speaker_name}]" if msg.speaker_name else "[Unknown]"
+            context += f"{prefix}: {msg.content}\n"
+
+        prompt = INNER_THOUGHT_PROMPT.format(
+            name=self.character.name,
+            hidden_role=self.character.hidden_role,
+            faction=self.character.faction,
+            recent_context=context or "(No prior discussion yet.)",
+        )
+
+        messages = [
+            {"role": "system", "content": f"You are the inner mind of {self.character.name}. Think honestly."},
+            {"role": "user", "content": prompt},
+        ]
+
+        try:
+            async with asyncio.timeout(5.0):
+                result = await self._mistral.chat.complete_async(
+                    model="mistral-small-latest",
+                    messages=messages,
+                    max_tokens=100,
+                    temperature=0.7,
+                )
+                return result.choices[0].message.content.strip() if result.choices else ""
+        except Exception as e:
+            logger.debug("Inner thought generation failed for %s: %s", self.character.name, e)
+            return ""
+
+    async def generate_last_words(self, elimination_type: str = "vote") -> str:
+        """Generate dramatic last words when this character is eliminated.
+        elimination_type: 'vote' or 'night_kill'. Returns fallback on failure."""
+        cause = "voted out by the council" if elimination_type == "vote" else "killed during the night"
+
+        prompt = (
+            f"You are {self.character.name} ({self.character.hidden_role} of the {self.character.faction} faction).\n"
+            f"You have just been {cause}.\n\n"
+            f"Speak your final words to the council. You may:\n"
+            f"- Reveal information or make an accusation\n"
+            f"- Express anger, betrayal, or acceptance\n"
+            f"- Leave a cryptic warning\n"
+            f"- Maintain your cover to the very end\n\n"
+            f"Stay in character. 1-3 sentences. Be dramatic and memorable."
+        )
+
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": prompt},
+        ]
+
+        try:
+            async with asyncio.timeout(15.0):
+                result = await self._mistral.chat.complete_async(
+                    model=self._model,
+                    messages=messages,
+                    max_tokens=200,
+                    temperature=0.8,
+                )
+                text = result.choices[0].message.content.strip() if result.choices else ""
+                return text or self._fallback_last_words()
+        except Exception as e:
+            logger.debug("Last words generation failed for %s: %s", self.character.name, e)
+            return self._fallback_last_words()
+
+    def _fallback_last_words(self) -> str:
+        """Return a generic last words message."""
+        options = [
+            f"Remember what I've said... the truth will come out.",
+            f"You'll regret this decision. Mark my words.",
+            f"So this is how it ends... I accept my fate.",
+        ]
+        return random.choice(options)
 
     async def respond(self, message: str, context_messages: list[ChatMessage], talk_modifier: str = "") -> str:
         """Generate an in-character response with safety guards."""

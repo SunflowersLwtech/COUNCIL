@@ -19,7 +19,7 @@ from backend.game import state as game_state
 from backend.game.character_agent import CharacterAgent
 from backend.game.prompts import (
     NARRATION_SYSTEM, NARRATION_TEMPLATES, RESPONDER_SELECTION_SYSTEM,
-    DISCUSSION_SUMMARY_SYSTEM,
+    DISCUSSION_SUMMARY_SYSTEM, SPEAKING_ORDER_PROMPT, MASTER_RULING_PROMPT,
 )
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Complication templates for dynamic event injection
-EARLY_ROUND_THRESHOLD = 1  # Kills active from round 1 (first night after first discussion)
+EARLY_ROUND_THRESHOLD = 0  # Kills active from round 1 (first night before first discussion)
 
 COMPLICATION_TYPES = {
     "revelation": "New information has come to light — someone's story doesn't add up. A detail from earlier contradicts what was just said.",
@@ -79,8 +79,9 @@ class GameMaster:
 
         if current == "lobby":
             state = game_state.advance_to_discussion(state)
-            narration = await self._generate_narration(state, "game_start", {
-                "num_players": len(game_state.get_alive_characters(state)),
+            narration = await self._generate_narration(state, "discussion_start", {
+                "round": state.round,
+                "summary_of_discussion": "",
             })
         elif current == "discussion":
             state = game_state.advance_to_voting(state)
@@ -186,6 +187,90 @@ class GameMaster:
 
         return None
 
+    async def determine_speaking_order(
+        self,
+        state: GameState,
+        agents: dict[str, CharacterAgent],
+    ) -> list[str]:
+        """Use AI to determine optimal speaking order for all alive characters.
+        Falls back to random shuffle on failure."""
+        alive = game_state.get_alive_characters(state)
+        char_list = ", ".join(f"{c.id} ({c.name})" for c in alive)
+
+        recent_msgs = state.messages[-10:] if state.messages else []
+        recent_events = "; ".join(
+            f"{m.speaker_name}: {m.content[:80]}" for m in recent_msgs
+        ) or "Game just started."
+
+        prompt = SPEAKING_ORDER_PROMPT.format(
+            characters=char_list,
+            recent_events=recent_events,
+            tension=state.tension_level,
+        )
+
+        try:
+            async with asyncio.timeout(8.0):
+                result = await self._mistral.chat.complete_async(
+                    model="mistral-small-latest",
+                    messages=[
+                        {"role": "system", "content": "You are the Game Master deciding discussion order."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_tokens=300,
+                    temperature=0.5,
+                    response_format={"type": "json_object"},
+                )
+                text = result.choices[0].message.content.strip()
+                data = json.loads(text)
+                order = data.get("order", [])
+                alive_ids = {c.id for c in alive}
+                # Validate: only keep valid alive IDs, append any missing ones
+                valid_order = [cid for cid in order if cid in alive_ids]
+                missing = [cid for cid in alive_ids if cid not in valid_order]
+                random.shuffle(missing)
+                return valid_order + missing
+        except Exception as e:
+            logger.debug("Speaking order AI failed, using random: %s", e)
+            ids = [c.id for c in alive]
+            random.shuffle(ids)
+            return ids
+
+    async def make_ruling(
+        self,
+        state: GameState,
+        situation: str,
+    ) -> tuple[str, str]:
+        """Use AI to make a narrative ruling for edge cases (ties, etc.).
+        Returns (decision, narration) tuple. Falls back to 'skip' on failure."""
+        alive = game_state.get_alive_characters(state)
+        prompt = MASTER_RULING_PROMPT.format(
+            situation=situation,
+            round=state.round,
+            alive_count=len(alive),
+            tension=state.tension_level,
+        )
+
+        try:
+            async with asyncio.timeout(10.0):
+                result = await self._mistral.chat.complete_async(
+                    model="mistral-large-latest",
+                    messages=[
+                        {"role": "system", "content": "You are the Master Agent Game Master."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_tokens=300,
+                    temperature=0.7,
+                    response_format={"type": "json_object"},
+                )
+                text = result.choices[0].message.content.strip()
+                data = json.loads(text)
+                decision = data.get("decision", "skip")
+                narration = data.get("narration", "The council cannot reach consensus. No one is eliminated.")
+                return decision, narration
+        except Exception as e:
+            logger.warning("Master Agent ruling failed: %s", e)
+            return "skip", "The council cannot reach consensus. No one is eliminated this round."
+
     async def handle_voting(
         self,
         state: GameState,
@@ -252,10 +337,13 @@ class GameMaster:
                 if isinstance(result, VoteRecord):
                     votes.append(result)
 
-        # Tally
+        # Tally by name (for display) and track name→id mapping
         tally: dict[str, int] = {}
+        name_to_id: dict[str, str] = {}
         for v in votes:
-            tally[v.target_id] = tally.get(v.target_id, 0) + 1
+            name = v.target_name or v.target_id
+            tally[name] = tally.get(name, 0) + 1
+            name_to_id[name] = v.target_id
 
         state.votes = votes
 
@@ -266,17 +354,26 @@ class GameMaster:
             return state, result
 
         max_votes = max(tally.values())
-        top = [tid for tid, count in tally.items() if count == max_votes]
+        top = [name for name, count in tally.items() if count == max_votes]
 
         if len(top) > 1:
-            # Tie
-            result = VoteResult(votes=votes, tally=tally, is_tie=True)
+            # Tie — invoke Master Agent ruling
+            ruling_decision, ruling_narration = await self.make_ruling(
+                state,
+                f"The vote is tied between {', '.join(top)} with {max_votes} votes each.",
+            )
+            result = VoteResult(
+                votes=votes, tally=tally, is_tie=True,
+                ruling_decision=ruling_decision, ruling_narration=ruling_narration,
+            )
             state.vote_results.append(result)
             return state, result
 
-        eliminated_id = top[0]
+        eliminated_name = top[0]
+        eliminated_id = name_to_id.get(eliminated_name, "")
         eliminated_char = next((c for c in alive if c.id == eliminated_id), None)
-        eliminated_name = eliminated_char.name if eliminated_char else "Unknown"
+        if not eliminated_char:
+            eliminated_name = "Unknown"
 
         state = game_state.eliminate_character(state, eliminated_id)
 
@@ -379,14 +476,13 @@ class GameMaster:
     ) -> tuple[GameState, str]:
         """Execute the night phase: collect actions, resolve conflicts, apply results.
 
-        Rounds 1-2: Investigation only — no kills, no protections needed.
-        Round 3+: Full powers — kills, protections, investigations.
+        Full powers (kills, protections, investigations) from the first night.
 
         Args:
             player_action: Optional night action from the human player.
         Returns (updated state, night narration).
         """
-        is_early_round = state.round < EARLY_ROUND_THRESHOLD  # Rounds 1-2: investigation only
+        is_early_round = state.round < EARLY_ROUND_THRESHOLD  # Always False with threshold=0: full powers from night 1
 
         alive = game_state.get_alive_characters(state)
         alive_public = [
@@ -440,10 +536,24 @@ class GameMaster:
                 return await agent.night_action(alive_public, role_actions)
             elif "doctor" in char.hidden_role.lower() or "protect" in char.hidden_role.lower():
                 if is_early_round:
-                    # Early rounds: Doctor can practice-protect (no kills to block)
                     role_actions = "You are the Doctor. Choose a target to PROTECT tonight. (No kills are possible yet — this is practice.)"
                     return await agent.night_action(alive_public, role_actions)
                 role_actions = "You are the Doctor. Choose a target to PROTECT tonight."
+                return await agent.night_action(alive_public, role_actions)
+            elif "witch" in char.hidden_role.lower() or "alchemist" in char.hidden_role.lower():
+                stock = char.potion_stock or {}
+                has_save = stock.get("save", 0) > 0
+                has_poison = stock.get("poison", 0) > 0
+                if not has_save and not has_poison:
+                    return NightAction(character_id=char.id, action_type="none",
+                                       result="No potions remaining")
+                options = []
+                if has_save:
+                    options.append("SAVE (action_type='save') — protect someone from tonight's kill (1 use remaining)")
+                if has_poison:
+                    options.append("POISON (action_type='poison') — eliminate an additional person tonight (1 use remaining)")
+                options.append("Do nothing (action_type='none')")
+                role_actions = f"You are the Witch. Available potions:\n" + "\n".join(f"- {o}" for o in options)
                 return await agent.night_action(alive_public, role_actions)
             return NightAction(character_id=char.id, action_type="none")
 
@@ -472,9 +582,11 @@ class GameMaster:
 
         state.night_actions = night_actions
 
-        # Resolve conflicts: kill vs protect
+        # Resolve conflicts: kill vs protect vs witch potions
         kill_targets = set()
         protect_targets = set()
+        save_targets = set()
+        poison_targets = set()
         investigate_actions = []
 
         for action in night_actions:
@@ -482,8 +594,32 @@ class GameMaster:
                 kill_targets.add(action.target_id)
             elif action.action_type == "protect" and action.target_id:
                 protect_targets.add(action.target_id)
+            elif action.action_type == "save" and action.target_id:
+                save_targets.add(action.target_id)
+                # Consume the save potion
+                witch_char = next((c for c in alive if c.id == action.character_id), None)
+                if witch_char and witch_char.potion_stock.get("save", 0) > 0:
+                    witch_char.potion_stock["save"] -= 1
+                # Also consume player potion if player used save
+                if action.character_id == "player" and state.player_role:
+                    if state.player_role.potion_stock.get("save", 0) > 0:
+                        state.player_role.potion_stock["save"] -= 1
+            elif action.action_type == "poison" and action.target_id:
+                poison_targets.add(action.target_id)
+                # Consume the poison potion
+                witch_char = next((c for c in alive if c.id == action.character_id), None)
+                if witch_char and witch_char.potion_stock.get("poison", 0) > 0:
+                    witch_char.potion_stock["poison"] -= 1
+                if action.character_id == "player" and state.player_role:
+                    if state.player_role.potion_stock.get("poison", 0) > 0:
+                        state.player_role.potion_stock["poison"] -= 1
             elif action.action_type == "investigate" and action.target_id:
                 investigate_actions.append(action)
+
+        # Witch save blocks kills, add save_targets to protect_targets
+        protect_targets |= save_targets
+        # Witch poison adds to kill targets
+        kill_targets |= poison_targets
 
         # Apply results
         killed_chars = []

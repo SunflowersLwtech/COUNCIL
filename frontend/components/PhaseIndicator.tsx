@@ -10,7 +10,7 @@ interface PhaseIndicatorProps {
   onTimerExpire?: () => void;
 }
 
-const GAME_PHASES: GamePhase[] = ["discussion", "voting", "reveal", "night"];
+const GAME_PHASES: GamePhase[] = ["night", "discussion", "voting", "reveal"];
 
 const PHASE_LABELS: Record<string, string> = {
   discussion: "Discussion",

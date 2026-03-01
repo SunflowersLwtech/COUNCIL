@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Vote, CheckCircle, AlertTriangle, Scale, ArrowRight } from "lucide-react";
 import { useGameState } from "@/hooks/useGameState";
 import { useSFX } from "@/hooks/useSFX";
@@ -101,10 +102,12 @@ export default function VotePanel() {
     staggeredVotes,
   } = useGameState();
   const sfx = useSFX();
+  const [showConfirm, setShowConfirm] = useState(false);
 
   if (!session) return null;
 
   const aliveCharacters = session.characters.filter((c) => !c.is_eliminated);
+  const selectedName = aliveCharacters.find((c) => c.id === selectedVote)?.name;
 
   // Show staggered vote reveal while votes are streaming in (after player votes, before tally)
   if (hasVoted && !voteResults && staggeredVotes.length > 0) {
@@ -231,10 +234,40 @@ export default function VotePanel() {
       <button
         className="demo-btn vote-cast-btn"
         disabled={!selectedVote || hasVoted}
-        onClick={() => { if (selectedVote) { sfx.playVote(); castVote(selectedVote); } }}
+        onClick={() => setShowConfirm(true)}
       >
         {hasVoted ? t("game.vote.waiting") : t("game.vote.confirm")}
       </button>
+
+      {/* Vote Confirmation Dialog */}
+      {showConfirm && selectedVote && (
+        <div className="vote-confirm-overlay" onClick={() => setShowConfirm(false)}>
+          <div className="vote-confirm-dialog animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <p className="vote-confirm-text">
+              Vote to eliminate <strong>{selectedName}</strong>?
+            </p>
+            <p className="vote-confirm-subtext">This action cannot be undone.</p>
+            <div className="vote-confirm-actions">
+              <button
+                className="vote-confirm-cancel"
+                onClick={() => setShowConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="demo-btn vote-confirm-submit"
+                onClick={() => {
+                  setShowConfirm(false);
+                  sfx.playVote();
+                  castVote(selectedVote);
+                }}
+              >
+                Confirm Vote
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

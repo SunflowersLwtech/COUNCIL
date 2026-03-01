@@ -80,6 +80,8 @@ export interface GameStreamEvent {
     | "stream_start"
     | "stream_delta"
     | "stream_end"
+    | "ai_thinking"
+    | "last_words"
     | "error"
     | "done";
   character_id?: string;
@@ -87,6 +89,7 @@ export interface GameStreamEvent {
   character_name?: string;
   content?: string;
   delta?: string;
+  thinking_content?: string;
   voice_id?: string;
   tts_text?: string;
   phase?: string;

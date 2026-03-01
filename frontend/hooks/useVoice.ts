@@ -1,9 +1,17 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { generateTTS } from "@/lib/api";
+import { generateTTS, getTTSStreamUrl } from "@/lib/api";
 import { agentRoleToId } from "@/lib/agent-utils";
 import { playManagedAudio, stopManagedAudio } from "@/lib/audio-manager";
+import { DUCK_EVENT, UNDUCK_EVENT } from "@/hooks/useBackgroundAudio";
+
+function emitDuck() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(DUCK_EVENT));
+}
+function emitUnduck() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(UNDUCK_EVENT));
+}
 
 export type VoiceStatus =
   | "idle"
@@ -15,6 +23,10 @@ export type VoiceStatus =
 interface UseVoiceOptions {
   onTranscript: (text: string) => void;
   onError?: (message: string) => void;
+  /** Called before TTS playback starts (duck background audio) */
+  onTtsStart?: () => void;
+  /** Called after TTS playback ends (restore background audio) */
+  onTtsEnd?: () => void;
 }
 
 interface TtsQueueItem {
@@ -32,7 +44,7 @@ function getWebSpeechRecognition(): (new () => any) | null {
   );
 }
 
-export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
+export function useVoice({ onTranscript, onError, onTtsStart, onTtsEnd }: UseVoiceOptions) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [partialTranscript, setPartialTranscript] = useState("");
   const [speakingAgentId, setSpeakingAgentId] = useState<string | null>(null);
@@ -271,10 +283,14 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
     async (text: string, agentRole: string) => {
       const agentId = agentRoleToId(agentRole);
       setStatus("speaking");
+      onTtsStart?.();
+      emitDuck();
 
       try {
         const blob = await generateTTS(text, agentId);
         if (!blob) {
+          onTtsEnd?.();
+          emitUnduck();
           setStatus("idle");
           return;
         }
@@ -287,12 +303,16 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
           URL.revokeObjectURL(url);
           audioRef.current = null;
           setSpeakingAgentId(null);
+          onTtsEnd?.();
+          emitUnduck();
           setStatus("idle");
         };
         audio.onerror = () => {
           URL.revokeObjectURL(url);
           audioRef.current = null;
           setSpeakingAgentId(null);
+          onTtsEnd?.();
+          emitUnduck();
           setStatus("idle");
         };
 
@@ -300,10 +320,12 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
         await audio.play();
       } catch {
         setSpeakingAgentId(null);
+        onTtsEnd?.();
+        emitUnduck();
         setStatus("idle");
       }
     },
-    []
+    [onTtsStart, onTtsEnd]
   );
 
   // ── TTS Queue (multi-agent) ───────────────────────────────────────
@@ -312,104 +334,91 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
     if (ttsProcessingRef.current) return;
     ttsProcessingRef.current = true;
     setStatus("speaking");
+    onTtsStart?.();
+    emitDuck();
 
     const abortController = new AbortController();
     queueAbortRef.current = abortController;
 
-    let prefetchedBlob: Blob | null = null;
-    let prefetchedItem: TtsQueueItem | null = null;
-
-    while (ttsQueueRef.current.length > 0 || prefetchedBlob) {
+    while (ttsQueueRef.current.length > 0) {
       if (abortController.signal.aborted) break;
+      const item = ttsQueueRef.current.shift()!;
+      const agentId = agentRoleToId(item.agentRole);
 
-      let blob: Blob | null;
-      let item: TtsQueueItem;
-
-      if (prefetchedBlob && prefetchedItem) {
-        blob = prefetchedBlob;
-        item = prefetchedItem;
-        prefetchedBlob = null;
-        prefetchedItem = null;
-      } else {
-        item = ttsQueueRef.current.shift()!;
-        const agentId = agentRoleToId(item.agentRole);
-        try {
-          blob = await generateTTS(item.text, agentId);
-        } catch {
-          blob = null;
-        }
-      }
-
-      if (!blob) continue;
-      if (abortController.signal.aborted) break;
-
-      // Pre-fetch next item while current audio plays (Bug 3: save reference)
-      let prefetchPromise: Promise<Blob | null> | null = null;
-      let prefetchRef: TtsQueueItem | null = null;
-      if (ttsQueueRef.current.length > 0) {
-        prefetchRef = ttsQueueRef.current[0];
-        const nextAgentId = agentRoleToId(prefetchRef.agentRole);
-        prefetchPromise = generateTTS(prefetchRef.text, nextAgentId).catch(() => null);
-      }
-
-      // Play audio via global audio manager (Bug 4)
-      const audio = playManagedAudio(blob, () => {
-        audioRef.current = null;
-        setSpeakingAgentId(null);
-      });
-      audioRef.current = audio;
-
-      // Wait for playback to finish, with abort support (Bug 2)
       await new Promise<void>((resolve) => {
-        const onAbort = () => resolve();
-        abortController.signal.addEventListener('abort', onAbort, { once: true });
-
-        const originalOnended = audio.onended;
-        audio.onended = (ev) => {
-          abortController.signal.removeEventListener('abort', onAbort);
-          if (typeof originalOnended === 'function') originalOnended.call(audio, ev);
-          resolve();
-        };
-        const originalOnerror = audio.onerror;
-        audio.onerror = (ev) => {
-          abortController.signal.removeEventListener('abort', onAbort);
-          if (typeof originalOnerror === 'function') (originalOnerror as any).call(audio, ev);
+        let settled = false;
+        const done = () => {
+          if (settled) return;
+          settled = true;
+          abortController.signal.removeEventListener("abort", onAbort);
+          setSpeakingAgentId(null);
+          if (audioRef.current) {
+            audioRef.current.onended = null;
+            audioRef.current.onerror = null;
+          }
           resolve();
         };
 
-        setSpeakingAgentId(agentRoleToId(item.agentRole));
-        audio.play().catch(() => {
-          abortController.signal.removeEventListener('abort', onAbort);
-          resolve();
-        });
-      });
+        const playBlobFallback = async () => {
+          try {
+            const blob = await generateTTS(item.text, agentId);
+            if (!blob || abortController.signal.aborted) {
+              done();
+              return;
+            }
+            const fallbackAudio = playManagedAudio(blob, () => {
+              audioRef.current = null;
+              done();
+            });
+            audioRef.current = fallbackAudio;
+            fallbackAudio.play().catch(() => done());
+          } catch {
+            done();
+          }
+        };
 
-      if (abortController.signal.aborted) break;
-
-      // Collect pre-fetched result (Bug 3: match by reference, not blind shift)
-      if (prefetchPromise && prefetchRef) {
-        try {
-          prefetchedBlob = await prefetchPromise;
-          if (prefetchedBlob) {
-            const idx = ttsQueueRef.current.indexOf(prefetchRef);
-            if (idx >= 0) {
-              prefetchedItem = ttsQueueRef.current.splice(idx, 1)[0];
-            } else {
-              // Item was consumed elsewhere, discard prefetched blob
-              prefetchedBlob = null;
+        const onAbort = () => {
+          if (audioRef.current) {
+            try {
+              audioRef.current.pause();
+              audioRef.current.currentTime = 0;
+              audioRef.current.src = "";
+            } catch {
+              // ignore abort cleanup errors
             }
           }
-        } catch {
-          prefetchedBlob = null;
-          prefetchedItem = null;
-        }
-      }
+          done();
+        };
+        abortController.signal.addEventListener("abort", onAbort, { once: true });
+
+        // Primary path: browser progressive playback from streamed endpoint.
+        const streamUrl = getTTSStreamUrl(item.text, agentId);
+        const streamAudio = new Audio(streamUrl);
+        audioRef.current = streamAudio;
+        setSpeakingAgentId(agentId);
+
+        streamAudio.onended = () => {
+          audioRef.current = null;
+          done();
+        };
+        streamAudio.onerror = () => {
+          audioRef.current = null;
+          playBlobFallback();
+        };
+
+        streamAudio.play().catch(() => {
+          audioRef.current = null;
+          playBlobFallback();
+        });
+      });
     }
 
     ttsProcessingRef.current = false;
     queueAbortRef.current = null;
+    onTtsEnd?.();
+    emitUnduck();
     setStatus("idle");
-  }, []);
+  }, [onTtsStart, onTtsEnd]);
 
   const queueAgentResponses = useCallback(
     (items: TtsQueueItem[]) => {
@@ -435,8 +444,10 @@ export function useVoice({ onTranscript, onError }: UseVoiceOptions) {
     stopManagedAudio();
     audioRef.current = null;
     setSpeakingAgentId(null);
+    onTtsEnd?.();
+    emitUnduck();
     setStatus("idle");
-  }, []);
+  }, [onTtsEnd]);
 
   return {
     status,

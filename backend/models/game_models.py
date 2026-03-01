@@ -181,6 +181,8 @@ class Character(BaseModel):
     # Motivation layer (from game-facilitator NPC-gen)
     want: str = ""
     method: str = ""
+    # Witch potion stock (only used by Witch role)
+    potion_stock: dict[str, int] = Field(default_factory=dict)
 
     @field_validator("name", "persona", "speaking_style", "avatar_seed",
                      "public_role", "hidden_role", "faction", "win_condition",
@@ -260,6 +262,8 @@ class VoteResult(BaseModel):
     eliminated_id: str | None = None
     eliminated_name: str | None = None
     is_tie: bool = False
+    ruling_decision: str = ""
+    ruling_narration: str = ""
 
 
 class NightAction(BaseModel):
@@ -293,10 +297,11 @@ class PlayerRole(BaseModel):
     is_eliminated: bool = False
     eliminated_by: str = ""         # "vote" | "night_kill" | ""
     allies: list[str] = Field(default_factory=list)  # char IDs of same-faction members (for wolves)
+    potion_stock: dict[str, int] = Field(default_factory=dict)  # Witch potions: {"save": 1, "poison": 1}
 
 
 class PlayerNightActionRequest(BaseModel):
-    action_type: Literal["kill", "investigate", "protect"] = "investigate"
+    action_type: Literal["kill", "investigate", "protect", "save", "poison"] = "investigate"
     target_character_id: str = ""
 
 

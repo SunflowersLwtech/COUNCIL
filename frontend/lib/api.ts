@@ -8,6 +8,27 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
+function isLoopbackHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+function getStreamBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_STREAM_API_URL) {
+    return process.env.NEXT_PUBLIC_STREAM_API_URL;
+  }
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== "undefined" && isLoopbackHost(window.location.hostname)) {
+    const proto = window.location.protocol === "https:" ? "https:" : "http:";
+    const host = window.location.hostname.includes(":")
+      ? `[${window.location.hostname}]`
+      : window.location.hostname;
+    return `${proto}//${host}:8000`;
+  }
+  return API_BASE;
+}
+
 export interface Finding {
   severity: "critical" | "high" | "medium" | "low" | "info";
   category: string;
@@ -72,6 +93,15 @@ export async function generateTTS(
   }
 }
 
+export function getTTSStreamUrl(text: string, agentId: string): string {
+  const streamBase = getStreamBaseUrl();
+  const params = new URLSearchParams({
+    text,
+    voice_id: agentId,
+  });
+  return `${streamBase}/api/voice/tts/stream?${params.toString()}`;
+}
+
 // ── Game API ────────────────────────────────────────────────────────
 
 export async function getGameScenarios(): Promise<ScenarioInfo[]> {
@@ -134,9 +164,10 @@ export function streamGameChat(
 ): AbortController {
   const controller = new AbortController();
   const timeoutSignal = AbortSignal.timeout(60000);
+  const streamBase = getStreamBaseUrl();
   (async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/game/${sessionId}/chat`, {
+      const res = await fetch(`${streamBase}/api/game/${sessionId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, target_character_id: targetCharId }),
@@ -175,10 +206,11 @@ export function streamOpenDiscussion(
   onEvent: (event: GameStreamEvent) => void
 ): AbortController {
   const controller = new AbortController();
-  const timeoutSignal = AbortSignal.timeout(90000);
+  const timeoutSignal = AbortSignal.timeout(180000);
+  const streamBase = getStreamBaseUrl();
   (async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/game/${sessionId}/open-discussion`, {
+      const res = await fetch(`${streamBase}/api/game/${sessionId}/open-discussion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: AbortSignal.any([controller.signal, timeoutSignal]),
@@ -218,9 +250,10 @@ export function streamGameVote(
 ): AbortController {
   const controller = new AbortController();
   const timeoutSignal = AbortSignal.timeout(60000);
+  const streamBase = getStreamBaseUrl();
   (async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/game/${sessionId}/vote`, {
+      const res = await fetch(`${streamBase}/api/game/${sessionId}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target_character_id: targetCharId }),
@@ -261,9 +294,10 @@ export function streamNightChat(
 ): AbortController {
   const controller = new AbortController();
   const timeoutSignal = AbortSignal.timeout(60000);
+  const streamBase = getStreamBaseUrl();
   (async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/game/${sessionId}/night-chat`, {
+      const res = await fetch(`${streamBase}/api/game/${sessionId}/night-chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message }),
@@ -311,9 +345,10 @@ export function streamPlayerNightAction(
 ): AbortController {
   const controller = new AbortController();
   const timeoutSignal = AbortSignal.timeout(60000);
+  const streamBase = getStreamBaseUrl();
   (async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/game/${sessionId}/night-action`, {
+      const res = await fetch(`${streamBase}/api/game/${sessionId}/night-action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action_type: actionType, target_character_id: targetId }),
@@ -359,9 +394,10 @@ export function streamGameNight(
 ): AbortController {
   const controller = new AbortController();
   const timeoutSignal = AbortSignal.timeout(60000);
+  const streamBase = getStreamBaseUrl();
   (async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/game/${sessionId}/night`, {
+      const res = await fetch(`${streamBase}/api/game/${sessionId}/night`, {
         method: "POST",
         signal: AbortSignal.any([controller.signal, timeoutSignal]),
       });

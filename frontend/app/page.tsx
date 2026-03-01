@@ -61,8 +61,33 @@ function GameEndScreen() {
           </div>
         </div>
 
-        {/* All characters with role reveals */}
-        <div className="game-end-characters animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+        {/* Key events timeline */}
+        <div className="game-end-timeline animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+          <p className="game-end-section-title">Key Events</p>
+          <div className="game-end-events">
+            {game.chatMessages
+              .filter(
+                (m) =>
+                  m.role === "narrator" ||
+                  m.role === "system" ||
+                  m.isLastWords ||
+                  m.isComplication
+              )
+              .slice(-10)
+              .map((m, i) => (
+                <div key={i} className="game-end-event">
+                  <div className="game-end-event-dot" />
+                  <span className="game-end-event-text">
+                    {m.characterName ? `${m.characterName}: ` : ""}
+                    {m.content}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* All characters with full role reveals */}
+        <div className="game-end-characters animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
           <p className="game-end-section-title">
             {t("game.end.allCharacters")}
           </p>
@@ -70,11 +95,22 @@ function GameEndScreen() {
             {game.session.characters.map((char) => {
               const color = seedToColor(char.avatar_seed || char.id);
               const initial = char.name.charAt(0).toUpperCase();
+              // Check revealed info from ghost mode data
+              const revealed = game.revealedCharacters.find((r) => r.id === char.id);
+              const hiddenRole = revealed?.hidden_role || "";
+              const faction = revealed?.faction || "";
+              const isEvil =
+                faction.toLowerCase().includes("werewolf") ||
+                faction.toLowerCase().includes("evil") ||
+                faction.toLowerCase().includes("mafia");
 
               return (
                 <div
                   key={char.id}
                   className={`game-end-char-card ${char.is_eliminated ? "game-end-char-eliminated" : ""}`}
+                  style={{
+                    borderColor: hiddenRole ? (isEvil ? "rgba(239, 68, 68, 0.3)" : "rgba(59, 130, 246, 0.3)") : undefined,
+                  }}
                 >
                   <div
                     className="game-end-char-avatar"
@@ -88,6 +124,14 @@ function GameEndScreen() {
                   <div className="game-end-char-info">
                     <span className="game-end-char-name">{char.name}</span>
                     <span className="game-end-char-role">{char.public_role}</span>
+                    {hiddenRole && (
+                      <span
+                        className="game-end-char-hidden"
+                        style={{ color: isEvil ? "#ef4444" : "#3b82f6" }}
+                      >
+                        {hiddenRole} ({faction})
+                      </span>
+                    )}
                   </div>
                   {char.is_eliminated && (
                     <Skull size={12} className="game-end-char-skull" />
@@ -97,6 +141,18 @@ function GameEndScreen() {
             })}
           </div>
         </div>
+
+        {/* Win condition analysis */}
+        {game.gameEnd && (
+          <div className="game-end-analysis animate-fade-in-up" style={{ animationDelay: "0.7s" }}>
+            <p className="game-end-section-title">Victory Analysis</p>
+            <p className="game-end-analysis-text">
+              The <strong>{game.gameEnd.winner}</strong> faction prevailed after{" "}
+              {game.round} rounds. {eliminatedCount} members were removed from the council
+              — {aliveCount} survived to see the outcome.
+            </p>
+          </div>
+        )}
 
         {/* Play again */}
         <div className="game-end-actions animate-fade-in-up" style={{ animationDelay: "0.6s" }}>

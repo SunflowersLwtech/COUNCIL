@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Crosshair, Search, ShieldPlus, Moon } from "lucide-react";
-import { useGameState } from "@/hooks/useGameState";
+import { useState, useRef, useEffect } from "react";
+import { Crosshair, Search, ShieldPlus, Moon, Send } from "lucide-react";
+import { useGameState, type GameChatMessage } from "@/hooks/useGameState";
 import { seedToColor } from "@/components/CharacterCard";
 
 const ACTION_CONFIG: Record<string, {
@@ -29,17 +29,62 @@ const ACTION_CONFIG: Record<string, {
     icon: ShieldPlus,
     accentColor: "#22c55e",
   },
+  save: {
+    title: "Use Save Potion",
+    subtitle: "Protect someone from tonight's kill (one-time use)",
+    icon: ShieldPlus,
+    accentColor: "#10b981",
+  },
+  poison: {
+    title: "Use Poison Potion",
+    subtitle: "Eliminate an additional person tonight (one-time use)",
+    icon: Crosshair,
+    accentColor: "#a855f7",
+  },
 };
 
 export default function NightActionPanel() {
-  const { nightActionRequired, submitNightAction, isChatStreaming } = useGameState();
+  const {
+    nightActionRequired, submitNightAction, isChatStreaming,
+    chatMessages, sendNightChat, session,
+  } = useGameState();
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
+  const [nightInput, setNightInput] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const nightChatStartRef = useRef<number>(0);
+
+  // Track the index where night chat messages start
+  useEffect(() => {
+    if (nightActionRequired) {
+      // When night action prompt appears, record current message count
+      // Subtract a few to capture ally auto-suggestions that came just before
+      nightChatStartRef.current = Math.max(0, chatMessages.length - (nightActionRequired.allies?.length || 0) * 2 - 2);
+    }
+  }, [!!nightActionRequired]); // Only run when nightActionRequired changes from null to non-null
+
+  // Auto-scroll chat area
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages.length]);
 
   if (!nightActionRequired) return null;
 
   const config = ACTION_CONFIG[nightActionRequired.actionType] || ACTION_CONFIG.kill;
   const Icon = config.icon;
   const allies = nightActionRequired.allies;
+  const isKillAction = nightActionRequired.actionType === "kill";
+
+  // Filter night chat messages (from the start index onward)
+  const nightMessages = chatMessages.slice(nightChatStartRef.current).filter(
+    (m) => m.role === "character" || m.role === "user"
+  );
+
+  const handleSendNightChat = () => {
+    const trimmed = nightInput.trim();
+    if (!trimmed || isChatStreaming) return;
+    setNightInput("");
+    sendNightChat(trimmed);
+  };
 
   return (
     <div className="night-action-panel animate-fade-in-up">
@@ -66,6 +111,57 @@ export default function NightActionPanel() {
           </div>
         )}
       </div>
+
+      {/* Night chat area — only for evil kill action */}
+      {isKillAction && allies && allies.length > 0 && (
+        <div className="night-chat-section">
+          <div className="night-chat-messages">
+            {nightMessages.length === 0 && (
+              <div className="night-chat-empty">
+                Your allies are whispering...
+              </div>
+            )}
+            {nightMessages.map((msg, i) => (
+              <div
+                key={i}
+                className={`night-chat-bubble ${msg.role === "user" ? "night-chat-bubble-user" : "night-chat-bubble-ally"}`}
+              >
+                {msg.role === "character" && msg.characterName && (
+                  <span className="night-chat-sender">{msg.characterName}</span>
+                )}
+                <span className="night-chat-text">
+                  {msg.content}
+                  {msg.isStreaming && <span className="night-chat-cursor" />}
+                </span>
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+          <div className="night-chat-input-row">
+            <input
+              type="text"
+              className="night-chat-input"
+              placeholder="Whisper to allies..."
+              value={nightInput}
+              onChange={(e) => setNightInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendNightChat();
+                }
+              }}
+              disabled={isChatStreaming}
+            />
+            <button
+              className="night-chat-send"
+              onClick={handleSendNightChat}
+              disabled={!nightInput.trim() || isChatStreaming}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="night-action-grid">
         {nightActionRequired.targets.map((target) => {

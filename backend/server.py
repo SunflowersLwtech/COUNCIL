@@ -208,7 +208,14 @@ async def game_state_endpoint(session_id: str, full: bool = Query(False)):
     """Get the public game state (no hidden info)."""
     orch = _require_orchestrator()
     try:
-        return await orch.get_public_state(session_id, full=full)
+        result = await orch.get_public_state(session_id, full=full)
+        # Re-register voice map on full state recovery (e.g. after backend restart)
+        if voice and full:
+            state = orch._sessions.get(session_id)
+            if state:
+                voice_map = {c.id: c.voice_id for c in state.characters}
+                voice.set_character_voices(voice_map)
+        return result
     except ValueError as e:
         return JSONResponse(status_code=404, content={"error": str(e)})
 
@@ -322,6 +329,30 @@ async def voice_tts_stream(request: TTSStreamRequest):
             return
 
     return StreamingResponse(audio_stream(), media_type="audio/mpeg")
+
+
+@app.get("/api/voice/tts/stream")
+async def voice_tts_stream_get(
+    text: str = Query(..., min_length=1),
+    voice_id: str = Query("Sarah"),
+):
+    """Stream TTS audio via query params (browser <audio> friendly)."""
+    if not voice or not voice.available:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Voice not available"},
+        )
+
+    async def audio_stream():
+        try:
+            async for chunk in voice.stream_tts(text, voice_id):
+                yield chunk
+        except Exception as e:
+            logger.warning("TTS stream error: %s", e)
+            return
+
+    headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"}
+    return StreamingResponse(audio_stream(), media_type="audio/mpeg", headers=headers)
 
 
 class SFXRequest(BaseModel):

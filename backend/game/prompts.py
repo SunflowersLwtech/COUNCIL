@@ -261,6 +261,48 @@ You feel compelled to react. Generate a SHORT spontaneous reaction (1 sentence m
 React emotionally or strategically based on your hidden role and persona.
 If nothing warrants a reaction, respond with exactly: PASS"""
 
+INNER_THOUGHT_PROMPT = """You are {name} ({hidden_role} of the {faction} faction).
+You are about to speak publicly in the council discussion.
+
+Recent discussion:
+{recent_context}
+
+Before speaking, think honestly to yourself. What do you REALLY think right now?
+Consider your hidden role, suspicions, fears, and strategy.
+Write 1-2 sentences of HONEST inner monologue that you would never say out loud.
+Return ONLY the inner thought, nothing else."""
+
+SPEAKING_ORDER_PROMPT = """You are the Game Master deciding the speaking order for this discussion round.
+Consider:
+- Who is most suspicious or under pressure? (they should speak early to defend)
+- Who has new information to share?
+- Who has been quiet and should be forced to reveal their stance?
+- Build dramatic tension: accusations first, defenses second, wild cards last.
+
+Alive characters: {characters}
+Recent events: {recent_events}
+Current tension level: {tension}
+
+Return valid JSON: {{"order": ["id1", "id2", ...], "reasoning": "brief explanation"}}
+Include ALL alive character IDs in the order."""
+
+MASTER_RULING_PROMPT = """You are the Master Agent — the Game Master of a social deduction game.
+A situation has arisen that requires your judgment:
+
+{situation}
+
+Current game state:
+- Round: {round}
+- Alive players: {alive_count}
+- Tension level: {tension}
+
+You must make a dramatic ruling. Choose one:
+1. "revote" — Force a revote between the tied candidates. Narrate tension building.
+2. "skip" — No elimination this round. Narrate divine intervention or procedural mercy.
+3. "custom" — Create a unique narrative ruling that fits the situation.
+
+Return valid JSON: {{"decision": "revote|skip|custom", "narration": "2-3 sentences of dramatic narration explaining your ruling"}}"""
+
 ROUND_SUMMARY_PROMPT = """Summarize the key events of this discussion round for your personal memory.
 Focus on:
 - Who accused whom and why

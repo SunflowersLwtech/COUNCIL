@@ -39,10 +39,14 @@ def transition(state: GameState, target: str) -> GameState:
 
 
 def advance_to_discussion(state: GameState) -> GameState:
-    """Move from lobby, reveal, or night to discussion phase."""
+    """Move from lobby/night to discussion phase.
+
+    First entry from lobby does not increment round.
+    Returning from night increments round.
+    """
     if state.phase == "lobby":
         state.phase = "discussion"
-    elif state.phase in ("reveal", "night"):
+    elif state.phase == "night":
         state.phase = "discussion"
         state.round += 1
     else:

@@ -30,9 +30,18 @@ export interface GameChatMessage {
   content: string;
   isThinking?: boolean;
   isStreaming?: boolean;
+  streamActorKey?: string;
   voiceId?: string;
   isComplication?: boolean;
   emotion?: string;
+  isLastWords?: boolean;
+}
+
+export interface AIThought {
+  characterId: string;
+  characterName: string;
+  content: string;
+  timestamp: number;
 }
 
 interface GameStateCtx {
@@ -70,6 +79,7 @@ interface GameStateCtx {
   staggeredVotes: Array<{
     voterName: string; targetName: string; timestamp: number;
   }>;
+  aiThoughts: AIThought[];
   // Actions
   uploadDocument: (file: File) => Promise<void>;
   uploadText: (text: string) => Promise<void>;
@@ -87,6 +97,7 @@ interface GameStateCtx {
   submitNightAction: (targetId: string) => void;
   dismissInvestigation: () => void;
   endDiscussion: () => void;
+  sendNightChat: (text: string) => void;
 }
 
 const GameStateContext = createContext<GameStateCtx | null>(null);
@@ -94,6 +105,16 @@ const GameStateContext = createContext<GameStateCtx | null>(null);
 interface GameStateProviderProps {
   children: ReactNode;
   onCharacterResponse?: (content: string, characterName: string, voiceId?: string, characterId?: string) => void;
+}
+
+const STREAM_RENDER_INTERVAL_MS = 26;
+const STREAM_LATIN_CHUNK_SIZE = 3;
+
+interface DeltaBufferState {
+  queue: string[];
+  pumping: boolean;
+  endEvent?: GameStreamEvent;
+  timerId: number | null;
 }
 
 export function GameStateProvider({ children, onCharacterResponse }: GameStateProviderProps) {
@@ -134,6 +155,8 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
   const [staggeredVotes, setStaggeredVotes] = useState<Array<{
     voterName: string; targetName: string; timestamp: number;
   }>>([]);
+  // AI inner thoughts for the thinking panel
+  const [aiThoughts, setAiThoughts] = useState<AIThought[]>([]);
 
   // Prune chat messages if they exceed 500
   useEffect(() => {
@@ -147,6 +170,26 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
   // Ref to access current session inside stable callbacks (handleStreamEvent has [] deps)
   const sessionRef = useRef(session);
   sessionRef.current = session;
+  const revealedCharacterRef = useRef(revealedCharacter);
+  revealedCharacterRef.current = revealedCharacter;
+  const deferredPhaseRef = useRef<{ phase: GamePhase; round?: number } | null>(null);
+  const deltaBuffersRef = useRef<Record<string, DeltaBufferState>>({});
+
+  const clearDeltaBuffers = useCallback(() => {
+    for (const key of Object.keys(deltaBuffersRef.current)) {
+      const timerId = deltaBuffersRef.current[key]?.timerId;
+      if (timerId !== null && timerId !== undefined) {
+        window.clearTimeout(timerId);
+      }
+    }
+    deltaBuffersRef.current = {};
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearDeltaBuffers();
+    };
+  }, [clearDeltaBuffers]);
 
   // ── Session recovery from localStorage ────────────────────────────
   const STORAGE_KEY = "council_session_id";
@@ -243,6 +286,137 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
   onCharacterResponseRef.current = onCharacterResponse;
 
   const handleStreamEvent = useCallback((event: GameStreamEvent) => {
+    const getActorKey = (evt: GameStreamEvent) =>
+      evt.character_id || evt.character_name || "__unknown_stream_actor";
+
+    const splitDeltaForDisplay = (deltaText: string): string[] => {
+      if (!deltaText) return [];
+      const chars = Array.from(deltaText);
+      const hasCJK = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/.test(deltaText);
+      const step = hasCJK ? 1 : STREAM_LATIN_CHUNK_SIZE;
+      const chunks: string[] = [];
+      for (let i = 0; i < chars.length; i += step) {
+        chunks.push(chars.slice(i, i + step).join(""));
+      }
+      return chunks;
+    };
+
+    const appendDeltaToMessage = (actorKey: string, delta: string) => {
+      if (!delta) return;
+      flushSync(() => {
+        setChatMessages((prev) => {
+          const idx = prev.findLastIndex(
+            (m) => m.isStreaming && m.streamActorKey === actorKey
+          );
+          if (idx === -1) return prev;
+          const updated = [...prev];
+          updated[idx] = {
+            ...updated[idx],
+            content: updated[idx].content + delta,
+          };
+          return updated;
+        });
+      });
+    };
+
+    const finalizeBufferedStream = (actorKey: string, endEvent: GameStreamEvent) => {
+      setChatMessages((prev) => {
+        const idx = prev.findLastIndex(
+          (m) => m.isStreaming && m.streamActorKey === actorKey
+        );
+        if (idx === -1) {
+          if (!endEvent.content) return prev;
+          return [
+            ...prev,
+            {
+              role: "character",
+              characterId: endEvent.character_id,
+              characterName: endEvent.character_name,
+              content: endEvent.content,
+              voiceId: endEvent.voice_id,
+              emotion: endEvent.emotion,
+            },
+          ];
+        }
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          content: endEvent.content || updated[idx].content,
+          isStreaming: false,
+          voiceId: endEvent.voice_id,
+          emotion: endEvent.emotion,
+          streamActorKey: undefined,
+        };
+        return updated;
+      });
+      if ((endEvent.tts_text || endEvent.content) && endEvent.character_name) {
+        onCharacterResponseRef.current?.(
+          endEvent.tts_text || endEvent.content || "",
+          endEvent.character_name,
+          endEvent.voice_id,
+          endEvent.character_id
+        );
+      }
+    };
+
+    const pumpBuffer = (actorKey: string) => {
+      const buffer = deltaBuffersRef.current[actorKey];
+      if (!buffer) return;
+      if (buffer.queue.length === 0) {
+        buffer.pumping = false;
+        buffer.timerId = null;
+        if (buffer.endEvent) {
+          const endEvent = buffer.endEvent;
+          delete deltaBuffersRef.current[actorKey];
+          finalizeBufferedStream(actorKey, endEvent);
+        }
+        return;
+      }
+      const nextChunk = buffer.queue.shift()!;
+      appendDeltaToMessage(actorKey, nextChunk);
+      buffer.timerId = window.setTimeout(() => pumpBuffer(actorKey), STREAM_RENDER_INTERVAL_MS);
+    };
+
+    const enqueueDelta = (evt: GameStreamEvent) => {
+      if (!evt.delta) return;
+      const actorKey = getActorKey(evt);
+      let buffer = deltaBuffersRef.current[actorKey];
+      if (!buffer) {
+        buffer = { queue: [], pumping: false, timerId: null };
+        deltaBuffersRef.current[actorKey] = buffer;
+      }
+      buffer.queue.push(...splitDeltaForDisplay(evt.delta));
+      if (!buffer.pumping) {
+        buffer.pumping = true;
+        pumpBuffer(actorKey);
+      }
+    };
+
+    const hasPendingDeltaBuffers = () =>
+      Object.values(deltaBuffersRef.current).some(
+        (buffer) => buffer.pumping || buffer.queue.length > 0
+      );
+
+    const runWhenDeltaIdle = (fn: () => void) => {
+      if (!hasPendingDeltaBuffers()) {
+        fn();
+        return;
+      }
+      window.setTimeout(() => runWhenDeltaIdle(fn), STREAM_RENDER_INTERVAL_MS);
+    };
+
+    const maybeApplyPhase = (nextPhase?: string, nextRound?: number) => {
+      if (!nextPhase) return;
+      const phaseValue = nextPhase as GamePhase;
+      // If reveal overlay is up, defer reveal->night so transition doesn't play behind it.
+      if (phaseValue === "night" && revealedCharacterRef.current) {
+        deferredPhaseRef.current = { phase: phaseValue, round: nextRound };
+        return;
+      }
+      setPhase(phaseValue);
+      if (nextRound) setRound(nextRound);
+    };
+
     switch (event.type) {
       case "responders":
         // List of characters who will respond - no UI action needed
@@ -264,10 +438,20 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         break;
 
       case "stream_start":
+        {
+        const actorKey = getActorKey(event);
+        const existing = deltaBuffersRef.current[actorKey];
+        if (existing?.timerId !== null && existing?.timerId !== undefined) {
+          window.clearTimeout(existing.timerId);
+        }
+        deltaBuffersRef.current[actorKey] = { queue: [], pumping: false, timerId: null };
         // Replace thinking placeholder with empty streaming message
         setChatMessages((prev) => {
           const filtered = prev.filter(
-            (m) => !(m.characterId === event.character_id && m.isThinking)
+            (m) => !(m.isThinking && (
+              (event.character_id && m.characterId === event.character_id) ||
+              (!event.character_id && event.character_name && m.characterName === event.character_name)
+            ))
           );
           return [
             ...filtered,
@@ -277,49 +461,41 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
               characterName: event.character_name,
               content: "",
               isStreaming: true,
+              streamActorKey: actorKey,
             },
           ];
         });
+        }
         break;
 
       case "stream_delta":
-        // Append delta to the streaming message
-        flushSync(() => {
-          setChatMessages((prev) => {
-            const idx = prev.findLastIndex(
-              (m) => m.characterId === event.character_id && m.isStreaming
-            );
-            if (idx === -1) return prev;
-            const updated = [...prev];
-            updated[idx] = { ...updated[idx], content: updated[idx].content + (event.delta || "") };
-            return updated;
-          });
-        });
+        enqueueDelta(event);
         break;
 
       case "stream_end":
-        // Finalize streaming message with complete text, trigger TTS
-        setChatMessages((prev) => {
-          const idx = prev.findLastIndex(
-            (m) => m.characterId === event.character_id && m.isStreaming
-          );
-          if (idx === -1) return prev;
-          const updated = [...prev];
-          updated[idx] = {
-            ...updated[idx],
-            content: event.content || updated[idx].content,
-            isStreaming: false,
-            voiceId: event.voice_id,
-            emotion: event.emotion,
-          };
-          return updated;
-        });
-        if (event.content && event.character_name) {
-          onCharacterResponseRef.current?.(event.content, event.character_name, event.voice_id, event.character_id);
+        {
+        const actorKey = getActorKey(event);
+        let buffer = deltaBuffersRef.current[actorKey];
+        if (!buffer) {
+          buffer = { queue: [], pumping: false, timerId: null };
+          deltaBuffersRef.current[actorKey] = buffer;
+        }
+        buffer.endEvent = event;
+        if (!buffer.pumping && buffer.queue.length === 0) {
+          delete deltaBuffersRef.current[actorKey];
+          finalizeBufferedStream(actorKey, event);
+        }
         }
         break;
 
       case "response":
+        {
+        const actorKey = getActorKey(event);
+        const existing = deltaBuffersRef.current[actorKey];
+        if (existing?.timerId !== null && existing?.timerId !== undefined) {
+          window.clearTimeout(existing.timerId);
+        }
+        delete deltaBuffersRef.current[actorKey];
         // Legacy non-streaming response (fallback)
         setChatMessages((prev) => {
           const filtered = prev.filter(
@@ -340,9 +516,17 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         if (event.content && event.character_name) {
           onCharacterResponseRef.current?.(event.content, event.character_name, event.voice_id, event.character_id);
         }
+        }
         break;
 
       case "reaction":
+        {
+        const actorKey = getActorKey(event);
+        const existing = deltaBuffersRef.current[actorKey];
+        if (existing?.timerId !== null && existing?.timerId !== undefined) {
+          window.clearTimeout(existing.timerId);
+        }
+        delete deltaBuffersRef.current[actorKey];
         // Spontaneous character reaction
         setChatMessages((prev) => [
           ...prev,
@@ -357,6 +541,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         ]);
         if (event.content && event.character_name) {
           onCharacterResponseRef.current?.(event.content, event.character_name, event.voice_id, event.character_id);
+        }
         }
         break;
 
@@ -415,8 +600,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         }
         // Narration with phase/round means phase transition
         if (event.phase) {
-          setPhase(event.phase as GamePhase);
-          if (event.round) setRound(event.round);
+          maybeApplyPhase(event.phase, event.round);
           if (event.phase === "voting") {
             setHasVoted(false);
             setVoteResults(null);
@@ -606,6 +790,37 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         }
         break;
 
+      case "ai_thinking":
+        // AI inner thought — add to thinking panel
+        if (event.character_id && event.character_name && event.thinking_content) {
+          setAiThoughts((prev) => [
+            ...prev,
+            {
+              characterId: event.character_id!,
+              characterName: event.character_name!,
+              content: event.thinking_content!,
+              timestamp: Date.now(),
+            },
+          ]);
+        }
+        break;
+
+      case "last_words":
+        // Eliminated character's final words
+        if (event.content) {
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              role: "character",
+              characterId: event.character_id,
+              characterName: event.character_name,
+              content: event.content!,
+              isLastWords: true,
+            },
+          ]);
+        }
+        break;
+
       case "night_action_prompt":
         // Player needs to choose a night action
         if (event.action_type && event.eligible_targets) {
@@ -656,36 +871,42 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
           ...prev,
           { role: "narrator", content: event.narration || `Game over! ${event.winner} wins!` },
         ]);
+        // Reveal all characters for the end screen
+        if (event.all_characters) {
+          setRevealedCharacters(event.all_characters);
+        }
         setPhase("ended");
         break;
 
       case "error":
+        clearDeltaBuffers();
         setError(event.error || "An error occurred");
         setIsChatStreaming(false);
         break;
 
       case "done":
-        setIsChatStreaming(false);
-        streamRef.current = null;
-        // done event may carry phase/round for next phase
-        if (event.phase) {
-          setPhase(event.phase as GamePhase);
-          if (event.round) setRound(event.round);
-        }
-        if (event.tension !== undefined) setTension(event.tension);
-        // Execute deferred discussion end (timer/button fired while streaming)
-        if (pendingDiscussionEndRef.current) {
-          pendingDiscussionEndRef.current = false;
-          setChatMessages(prev => [...prev, { role: "system", content: "The council has heard enough. The vote will now begin." }]);
-          setPhase("voting");
-          setHasVoted(false);
-          setVoteResults(null);
-          setSelectedVote(null);
-          setStaggeredVotes([]);
-        }
+        runWhenDeltaIdle(() => {
+          setIsChatStreaming(false);
+          streamRef.current = null;
+          // done event may carry phase/round for next phase
+          if (event.phase) {
+            maybeApplyPhase(event.phase, event.round);
+          }
+          if (event.tension !== undefined) setTension(event.tension);
+          // Execute deferred discussion end (timer/button fired while streaming)
+          if (pendingDiscussionEndRef.current) {
+            pendingDiscussionEndRef.current = false;
+            setChatMessages(prev => [...prev, { role: "system", content: "The council has heard enough. The vote will now begin." }]);
+            setPhase("voting");
+            setHasVoted(false);
+            setVoteResults(null);
+            setSelectedVote(null);
+            setStaggeredVotes([]);
+          }
+        });
         break;
     }
-  }, []);
+  }, [clearDeltaBuffers]);
 
   const uploadDocument = useCallback(async (file: File) => {
     setPhase("parsing");
@@ -785,20 +1006,11 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     setPhase("discussion");
     setChatMessages([{
       role: "narrator",
-      content: introNarration || "The council is now in session. Speak your mind.",
+      content: introNarration || "The council session begins. The first debate starts now.",
     }]);
     setIntroNarration(null);
-
-    // Auto-trigger opening statements from AI characters
-    if (session) {
-      setIsChatStreaming(true);
-      const controller = api.streamOpenDiscussion(
-        session.session_id,
-        handleStreamEvent
-      );
-      streamRef.current = controller;
-    }
-  }, [introNarration, session, handleStreamEvent]);
+    // Opening discussion auto-triggers via the useEffect watching phase === "discussion"
+  }, [introNarration]);
 
   const showHowToPlay = useCallback(() => {
     if (!session) return;
@@ -873,6 +1085,21 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     [session, nightActionRequired, isChatStreaming, handleStreamEvent]
   );
 
+  const sendNightChat = useCallback(
+    (text: string) => {
+      if (!session || isChatStreaming) return;
+      setChatMessages((prev) => [...prev, { role: "user", content: text }]);
+      setIsChatStreaming(true);
+      const controller = api.streamNightChat(
+        session.session_id,
+        text,
+        handleStreamEvent
+      );
+      streamRef.current = controller;
+    },
+    [session, isChatStreaming, handleStreamEvent]
+  );
+
   const dismissInvestigation = useCallback(() => {
     setInvestigationResult(null);
   }, []);
@@ -893,6 +1120,12 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
 
   const dismissReveal = useCallback(() => {
     setRevealedCharacter(null);
+    if (deferredPhaseRef.current) {
+      const pending = deferredPhaseRef.current;
+      deferredPhaseRef.current = null;
+      setPhase(pending.phase);
+      if (pending.round) setRound(pending.round);
+    }
   }, []);
 
   // Auto-trigger night phase after a delay when conditions are met:
@@ -917,10 +1150,34 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
           handleStreamEvent
         );
         streamRef.current = controller;
-      }, 3000); // 3s NightOverlay display before triggering night resolution
+      }, 4500); // Let transition + night overlay stay visible before resolving
       return () => clearTimeout(timer);
     }
   }, [phase, revealedCharacter, isChatStreaming, nightActionRequired, session, gameEnd, handleStreamEvent]);
+
+  // Auto-trigger structured opening discussion when entering discussion phase
+  // (after night resolution or after intro on the very first round)
+  const openDiscussionTriggeredRef = useRef<number>(0);
+  useEffect(() => {
+    if (
+      phase === "discussion" &&
+      !isChatStreaming &&
+      session &&
+      !gameEnd &&
+      round !== openDiscussionTriggeredRef.current
+    ) {
+      openDiscussionTriggeredRef.current = round;
+      const timer = setTimeout(() => {
+        setIsChatStreaming(true);
+        const controller = api.streamOpenDiscussion(
+          session.session_id,
+          handleStreamEvent
+        );
+        streamRef.current = controller;
+      }, 2200);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, isChatStreaming, session, gameEnd, round, handleStreamEvent]);
 
   const triggerNight = useCallback(() => {
     if (!session || isChatStreaming) return;
@@ -937,6 +1194,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
       streamRef.current.abort();
       streamRef.current = null;
     }
+    clearDeltaBuffers();
     localStorage.removeItem(STORAGE_KEY);
     setPhase("upload");
     setSession(null);
@@ -957,7 +1215,8 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
     setInvestigationResult(null);
     setRevealedCharacters([]);
     setStaggeredVotes([]);
-  }, []);
+    deferredPhaseRef.current = null;
+  }, [clearDeltaBuffers]);
 
   const loadScenarios = useCallback(async () => {
     try {
@@ -998,6 +1257,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         investigationResult,
         revealedCharacters,
         staggeredVotes,
+        aiThoughts,
         uploadDocument,
         uploadText,
         loadScenario: loadScenarioFn,
@@ -1014,6 +1274,7 @@ export function GameStateProvider({ children, onCharacterResponse }: GameStatePr
         submitNightAction,
         dismissInvestigation,
         endDiscussion,
+        sendNightChat,
       }}
     >
       {children}
